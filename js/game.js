@@ -2,10 +2,10 @@
 const EcoGame = (() => {
   const TILE = 40;
   const PLAYER_R = 0.28;
-  const SPEED = 3.4; // tiles/s
-  const PING_DURATION = 0.9;
+  const SPEED = 4.2; // tiles/s — snappier mobile
+  const PING_DURATION = 1.0;
   const PING_RADIUS = 7.5; // tiles
-  const MEMORY_FADE = 2.8; // segundos após ping local
+  const MEMORY_FADE = 4.2; // segundos após ping local
 
   let canvas, ctx;
   let W = 0, H = 0;
@@ -78,9 +78,12 @@ const EcoGame = (() => {
     cam.x = player.x;
     cam.y = player.y;
     state = 'play';
+    if (EcoInput.markLevelStart) EcoInput.markLevelStart();
     EcoUI.hideAllOverlays();
     EcoUI.setPlaying(true);
     EcoUI.updateHud(levelIndex + 1, crystalsGot, level.totalCrystals);
+    // Processa ping pendente imediatamente (não descartar no frame do restart)
+    if (EcoInput.consumePing()) doPing();
   }
 
   function setState(s) { state = s; }
@@ -119,24 +122,36 @@ const EcoGame = (() => {
     return level.tiles[ty][tx];
   }
 
+  function tryMoveDelta(dx, dy) {
+    if (!dx && !dy) return false;
+    let moved = false;
+    const nx = player.x + dx;
+    const ny = player.y + dy;
+    if (!collides(nx, player.y)) { player.x = nx; moved = true; }
+    else {
+      const tryX = player.x + Math.sign(dx) * Math.abs(dx);
+      if (dx && !collides(tryX, player.y)) { player.x = tryX; moved = true; }
+    }
+    if (!collides(player.x, ny)) { player.y = ny; moved = true; }
+    else {
+      const tryY = player.y + Math.sign(dy) * Math.abs(dy);
+      if (dy && !collides(player.x, tryY)) { player.y = tryY; moved = true; }
+    }
+    return moved;
+  }
+
   function movePlayer(dt) {
+    // Nudge imediato no toque do D-pad (tap curto ainda desloca)
+    if (EcoInput.consumeNudges) {
+      for (const n of EcoInput.consumeNudges()) {
+        tryMoveDelta(n.x, n.y);
+        stepAcc += 0.4;
+      }
+    }
+
     const m = EcoInput.movement();
     if (!m.x && !m.y) return;
-    const nx = player.x + m.x * SPEED * dt;
-    const ny = player.y + m.y * SPEED * dt;
-
-    // colisão eixo X
-    if (!collides(nx, player.y)) player.x = nx;
-    else {
-      // slide
-      const tryX = player.x + Math.sign(m.x) * SPEED * dt;
-      if (!collides(tryX, player.y)) player.x = tryX;
-    }
-    if (!collides(player.x, ny)) player.y = ny;
-    else {
-      const tryY = player.y + Math.sign(m.y) * SPEED * dt;
-      if (!collides(player.x, tryY)) player.y = tryY;
-    }
+    tryMoveDelta(m.x * SPEED * dt, m.y * SPEED * dt);
 
     stepAcc += Math.hypot(m.x, m.y) * SPEED * dt;
     if (stepAcc > 0.55) {
@@ -184,7 +199,7 @@ const EcoGame = (() => {
           if (d <= waveR) {
             const fall = 1 - d / p.maxR;
             const boost = fall * fall * (1 - u * 0.15);
-            memory[ty][tx] = Math.max(memory[ty][tx], Math.min(1, 0.25 + boost * 0.95));
+            memory[ty][tx] = Math.max(memory[ty][tx], Math.min(1, 0.5 + boost * 1.05));
           }
         }
       }
@@ -294,15 +309,21 @@ const EcoGame = (() => {
       updateReveal(dt);
       checkPickups();
     } else {
-      // still advance reveal visuals a bit on overlays? skip
-      EcoInput.consumePing();
+      // NÃO descartar ping no mesmo instante do restart — só limpa pause
       EcoInput.consumePause();
+      if (EcoInput.shouldDiscardPingOutsidePlay && EcoInput.shouldDiscardPingOutsidePlay()) {
+        // Descartar pings acidentais em overlays (exceto janela pós-startLevel)
+        // Mantém fila se markLevelStart acabou de rodar
+      } else {
+        // janela pós-start: se ainda houver ping e já estamos prestes a play, ok
+      }
+      // Fora de play: não consumir ping (evita “primeiro ping sem reveal” após Reiniciar)
     }
 
-    // camera lerp
+    // camera lag — jogador “deriva” alguns px ao andar (movimento óbvio)
     const follow = state === 'play' || state === 'pause' || state === 'death' || state === 'win';
     if (follow && level) {
-      const lerp = 1 - Math.pow(0.001, dt);
+      const lerp = Math.min(1, 3.0 * dt); // ~0.05/frame @60fps — atraso perceptível
       cam.x += (player.x - cam.x) * lerp;
       cam.y += (player.y - cam.y) * lerp;
     }
@@ -313,20 +334,21 @@ const EcoGame = (() => {
   }
 
   function visibility(tx, ty) {
-    // always faint near player
+    // ambient próximo ao jogador (mais forte — movimento legível no escuro)
     const d = Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y);
     let v = memory[ty] ? memory[ty][tx] : 0;
-    if (d < 1.1) v = Math.max(v, 0.12 * (1 - d / 1.1));
+    if (d < 1.85) v = Math.max(v, 0.38 * (1 - d / 1.85));
+    if (d < 0.85) v = Math.max(v, 0.55 * (1 - d / 0.85));
     // active ping boost ring
     for (const p of pings) {
       const pd = Math.hypot(tx + 0.5 - p.x, ty + 0.5 - p.y);
       const waveR = p.maxR * easeOutCubic(Math.min(1, p.t / (p.life * 0.55)));
       const band = Math.abs(pd - waveR);
-      if (band < 0.35 && pd < p.maxR) v = Math.max(v, 0.9);
+      if (band < 0.4 && pd < p.maxR) v = Math.max(v, 1.0);
       if (pd < waveR) {
         const fall = 1 - pd / p.maxR;
         const u = p.t / p.life;
-        v = Math.max(v, fall * (0.7 - u * 0.4));
+        v = Math.max(v, fall * (0.95 - u * 0.35));
       }
     }
     return Math.min(1, v);
@@ -368,42 +390,45 @@ const EcoGame = (() => {
         const a = v;
 
         if (t === 'wall') {
-          // fill subtle + cyan outline
-          ctx.fillStyle = `rgba(12, 28, 36, ${a * 0.55})`;
+          // fill + cyan outline (alto contraste vs preto)
+          ctx.fillStyle = `rgba(28, 58, 68, ${Math.min(1, a * 0.88)})`;
           ctx.fillRect(s.x, s.y, TILE + 0.5, TILE + 0.5);
-          ctx.strokeStyle = `rgba(64, 224, 208, ${a * 0.85})`;
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = `rgba(120, 245, 235, ${Math.min(1, a * 1.0)})`;
+          ctx.lineWidth = 2;
           ctx.strokeRect(s.x + 1, s.y + 1, TILE - 2, TILE - 2);
         } else if (t === 'pit') {
-          ctx.fillStyle = `rgba(40, 8, 12, ${a * 0.85})`;
-          ctx.fillRect(s.x + 4, s.y + 4, TILE - 8, TILE - 8);
-          ctx.strokeStyle = `rgba(224, 80, 96, ${a * 0.9})`;
-          ctx.lineWidth = 1.5;
+          ctx.fillStyle = `rgba(70, 12, 20, ${Math.min(1, a * 0.95)})`;
+          ctx.fillRect(s.x + 3, s.y + 3, TILE - 6, TILE - 6);
+          ctx.strokeStyle = `rgba(255, 90, 110, ${Math.min(1, a)})`;
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          // spikes hint
           const cx = s.x + TILE / 2, cy = s.y + TILE / 2;
           for (let i = 0; i < 3; i++) {
             const ang = -Math.PI / 2 + i * (Math.PI * 2 / 3);
             ctx.moveTo(cx, cy);
-            ctx.lineTo(cx + Math.cos(ang) * 10, cy + Math.sin(ang) * 10);
+            ctx.lineTo(cx + Math.cos(ang) * 11, cy + Math.sin(ang) * 11);
           }
           ctx.stroke();
         } else if (t === 'exit') {
           const g = ctx.createRadialGradient(
             s.x + TILE / 2, s.y + TILE / 2, 2,
-            s.x + TILE / 2, s.y + TILE / 2, TILE * 0.7
+            s.x + TILE / 2, s.y + TILE / 2, TILE * 0.85
           );
-          g.addColorStop(0, `rgba(255, 200, 120, ${a * 0.95})`);
+          g.addColorStop(0, `rgba(255, 220, 140, ${Math.min(1, a)})`);
+          g.addColorStop(0.55, `rgba(240, 160, 96, ${a * 0.55})`);
           g.addColorStop(1, `rgba(240, 160, 96, 0)`);
           ctx.fillStyle = g;
-          ctx.fillRect(s.x - 8, s.y - 8, TILE + 16, TILE + 16);
-          ctx.strokeStyle = `rgba(240, 160, 96, ${a})`;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(s.x + 6, s.y + 6, TILE - 12, TILE - 12);
+          ctx.fillRect(s.x - 10, s.y - 10, TILE + 20, TILE + 20);
+          ctx.strokeStyle = `rgba(255, 200, 120, ${Math.min(1, a)})`;
+          ctx.lineWidth = 2.5;
+          ctx.strokeRect(s.x + 5, s.y + 5, TILE - 10, TILE - 10);
         } else {
-          // floor barely visible
-          ctx.fillStyle = `rgba(18, 28, 34, ${a * 0.22})`;
+          // floor mais legível
+          ctx.fillStyle = `rgba(36, 52, 62, ${a * 0.42})`;
           ctx.fillRect(s.x, s.y, TILE, TILE);
+          ctx.strokeStyle = `rgba(64, 120, 130, ${a * 0.25})`;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(s.x + 0.5, s.y + 0.5, TILE - 1, TILE - 1);
         }
       }
     }
@@ -463,10 +488,10 @@ const EcoGame = (() => {
       const pr = PLAYER_R * TILE;
       ctx.beginPath();
       ctx.arc(s.x, s.y, pr, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(180, 210, 210, 0.22)';
+      ctx.fillStyle = 'rgba(200, 230, 230, 0.38)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(200, 255, 245, 0.55)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(210, 255, 250, 0.85)';
+      ctx.lineWidth = 2;
       ctx.stroke();
       // eye glint
       ctx.fillStyle = 'rgba(200, 255, 245, 0.7)';

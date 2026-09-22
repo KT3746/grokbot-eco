@@ -18,9 +18,15 @@ const EcoUI = (() => {
   }
 
   function setPlaying(on) {
-    $('hud').classList.toggle('hidden', !on);
-    $('hint-bar').classList.toggle('hidden', !on);
-    $('touch').classList.toggle('hidden', !on);
+    const hud = $('hud');
+    const hint = $('hint-bar');
+    const touch = $('touch');
+    if (hud) hud.classList.toggle('hidden', !on);
+    if (hint) hint.classList.toggle('hidden', !on);
+    if (touch) {
+      touch.classList.toggle('hidden', !on);
+      touch.setAttribute('aria-hidden', on ? 'false' : 'true');
+    }
   }
 
   function updateHud(phase, crystals, total) {

@@ -1,25 +1,116 @@
-/* ECO — teclado + toque (mobile-safe) */
+/* ECO — teclado + toque (hold confiável + nudge) */
 const EcoInput = (() => {
   const keys = Object.create(null);
   const touchDirs = { up: false, down: false, left: false, right: false };
+  const DIR_VEC = {
+    up: { x: 0, y: -1 },
+    down: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+  };
+  const CODE_TO_KEY = {
+    KeyW: 'w', ArrowUp: 'arrowup',
+    KeyS: 's', ArrowDown: 'arrowdown',
+    KeyA: 'a', ArrowLeft: 'arrowleft',
+    KeyD: 'd', ArrowRight: 'arrowright',
+    Space: ' ',
+    Escape: 'escape',
+  };
+
   let pingQueued = false;
   let pauseQueued = false;
   let blockCanvasPingUntil = 0;
   let tapX = 0, tapY = 0, tapId = null, tapAt = 0;
+  let nudges = []; // {x,y} tiles — applied once on press
+  let suppressPingDiscard = false; // após startLevel
+
+  function keyFromEvent(e) {
+    if (e.code && CODE_TO_KEY[e.code]) return CODE_TO_KEY[e.code];
+    const k = (e.key || '').toLowerCase();
+    if (k === 'spacebar') return ' ';
+    return k;
+  }
+
+  function pressDir(d, btn) {
+    if (!DIR_VEC[d]) return;
+    const was = touchDirs[d];
+    touchDirs[d] = true;
+    if (btn) btn.classList.add('is-down');
+    blockCanvasPingUntil = performance.now() + 320;
+    // Nudge só na transição solto→preso (evita pointer+touch duplicar)
+    if (!was) {
+      const v = DIR_VEC[d];
+      nudges.push({ x: v.x * 0.42, y: v.y * 0.42 });
+    }
+  }
+
+  function releaseDir(d, btn) {
+    if (!DIR_VEC[d]) return;
+    touchDirs[d] = false;
+    if (btn) btn.classList.remove('is-down');
+  }
+
+  function bindPad(btn) {
+    const d = btn.dataset.dir;
+    if (!d) return;
+
+    const onPointer = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      pressDir(d, btn);
+      try { btn.setPointerCapture(ev.pointerId); } catch (_) {}
+    };
+    const offPointer = (ev) => {
+      if (ev && ev.preventDefault) ev.preventDefault();
+      releaseDir(d, btn);
+    };
+
+    btn.addEventListener('pointerdown', onPointer);
+    btn.addEventListener('pointerup', offPointer);
+    btn.addEventListener('pointercancel', offPointer);
+    btn.addEventListener('lostpointercapture', () => releaseDir(d, btn));
+
+    // Backups (alguns WebViews perdem pointer rápido)
+    btn.addEventListener('touchstart', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      pressDir(d, btn);
+    }, { passive: false });
+    btn.addEventListener('touchend', (ev) => {
+      ev.preventDefault();
+      releaseDir(d, btn);
+    }, { passive: false });
+    btn.addEventListener('touchcancel', () => releaseDir(d, btn));
+
+    btn.addEventListener('mousedown', (ev) => {
+      ev.preventDefault();
+      pressDir(d, btn);
+    });
+    btn.addEventListener('mouseup', (ev) => {
+      ev.preventDefault();
+      releaseDir(d, btn);
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (touchDirs[d]) releaseDir(d, btn);
+    });
+  }
 
   function bind(canvas) {
     window.addEventListener('keydown', (e) => {
-      const k = e.key.toLowerCase();
+      const k = keyFromEvent(e);
       keys[k] = true;
-      if (k === 'arrowup' || k === 'arrowdown' || k === 'arrowleft' || k === 'arrowright' || k === ' ' || k === 'spacebar') {
+      if (e.code) keys['code:' + e.code] = true;
+      if (k === 'arrowup' || k === 'arrowdown' || k === 'arrowleft' || k === 'arrowright' || k === ' ') {
         e.preventDefault();
       }
-      if (k === ' ' || k === 'spacebar') pingQueued = true;
+      if (k === ' ') pingQueued = true;
       if (k === 'escape') pauseQueued = true;
     }, { passive: false });
 
     window.addEventListener('keyup', (e) => {
-      keys[e.key.toLowerCase()] = false;
+      const k = keyFromEvent(e);
+      keys[k] = false;
+      if (e.code) keys['code:' + e.code] = false;
     });
 
     const blockScroll = (e) => {
@@ -30,49 +121,33 @@ const EcoInput = (() => {
     document.addEventListener('touchmove', blockScroll, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
 
-    document.querySelectorAll('.pad[data-dir]').forEach((btn) => {
-      const d = btn.dataset.dir;
-      const on = (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        touchDirs[d] = true;
-        btn.classList.add('is-down');
-        blockCanvasPingUntil = performance.now() + 280;
-        try { btn.setPointerCapture(ev.pointerId); } catch (_) {}
-      };
-      const off = (ev) => {
-        if (ev && ev.preventDefault) ev.preventDefault();
-        touchDirs[d] = false;
-        btn.classList.remove('is-down');
-      };
-      btn.addEventListener('pointerdown', on);
-      btn.addEventListener('pointerup', off);
-      btn.addEventListener('pointercancel', off);
-      btn.addEventListener('lostpointercapture', () => {
-        touchDirs[d] = false;
-        btn.classList.remove('is-down');
-      });
-    });
+    document.querySelectorAll('.pad[data-dir]').forEach(bindPad);
 
     const pingBtn = document.getElementById('btn-ping');
     if (pingBtn) {
-      pingBtn.addEventListener('pointerdown', (e) => {
+      let pingDownAt = 0;
+      const pingDown = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        const now = performance.now();
+        if (now - pingDownAt < 40) return; // dedupe pointer+touch
+        pingDownAt = now;
         pingBtn.classList.add('is-down');
-        blockCanvasPingUntil = performance.now() + 350;
-        try { pingBtn.setPointerCapture(e.pointerId); } catch (_) {}
+        blockCanvasPingUntil = now + 400;
         pingQueued = true;
-      });
-      const pingEnd = (e) => {
+        try { if (e.pointerId != null) pingBtn.setPointerCapture(e.pointerId); } catch (_) {}
+      };
+      const pingUp = (e) => {
         if (e && e.preventDefault) e.preventDefault();
         pingBtn.classList.remove('is-down');
       };
-      pingBtn.addEventListener('pointerup', pingEnd);
-      pingBtn.addEventListener('pointercancel', pingEnd);
-      pingBtn.addEventListener('pointermove', (e) => {
-        if (pingBtn.classList.contains('is-down')) e.preventDefault();
-      });
+      pingBtn.addEventListener('pointerdown', pingDown);
+      pingBtn.addEventListener('pointerup', pingUp);
+      pingBtn.addEventListener('pointercancel', pingUp);
+      pingBtn.addEventListener('touchstart', pingDown, { passive: false });
+      pingBtn.addEventListener('touchend', pingUp, { passive: false });
+      pingBtn.addEventListener('mousedown', pingDown);
+      pingBtn.addEventListener('mouseup', pingUp);
     }
 
     canvas.addEventListener('pointerdown', (e) => {
@@ -105,7 +180,7 @@ const EcoInput = (() => {
     if (!touch || touch.classList.contains('hidden')) return false;
     const dpad = touch.querySelector('.dpad');
     const ping = document.getElementById('btn-ping');
-    const pad = 14;
+    const pad = 16;
     for (const el of [dpad, ping]) {
       if (!el) continue;
       const r = el.getBoundingClientRect();
@@ -123,18 +198,49 @@ const EcoInput = (() => {
     return true;
   }
 
+  function peekPing() {
+    return pingQueued;
+  }
+
   function consumePause() {
     if (!pauseQueued) return false;
     pauseQueued = false;
     return true;
   }
 
+  function consumeNudges() {
+    if (!nudges.length) return [];
+    const out = nudges;
+    nudges = [];
+    return out;
+  }
+
+  function releaseAllDirs() {
+    touchDirs.up = touchDirs.down = touchDirs.left = touchDirs.right = false;
+    document.querySelectorAll('.pad.is-down').forEach((b) => b.classList.remove('is-down'));
+  }
+
+  function markLevelStart() {
+    // Não descartar ping na transição; limpa só movimento preso
+    releaseAllDirs();
+    suppressPingDiscard = true;
+    setTimeout(() => { suppressPingDiscard = false; }, 200);
+  }
+
+  function shouldDiscardPingOutsidePlay() {
+    return !suppressPingDiscard;
+  }
+
+  function isHeld(dir) {
+    return !!touchDirs[dir];
+  }
+
   function movement() {
     let x = 0, y = 0;
-    const up = touchDirs.up || keys['w'] || keys['arrowup'];
-    const down = touchDirs.down || keys['s'] || keys['arrowdown'];
-    const left = touchDirs.left || keys['a'] || keys['arrowleft'];
-    const right = touchDirs.right || keys['d'] || keys['arrowright'];
+    const up = touchDirs.up || keys['w'] || keys['arrowup'] || keys['code:KeyW'] || keys['code:ArrowUp'];
+    const down = touchDirs.down || keys['s'] || keys['arrowdown'] || keys['code:KeyS'] || keys['code:ArrowDown'];
+    const left = touchDirs.left || keys['a'] || keys['arrowleft'] || keys['code:KeyA'] || keys['code:ArrowLeft'];
+    const right = touchDirs.right || keys['d'] || keys['arrowright'] || keys['code:KeyD'] || keys['code:ArrowRight'];
     if (left) x -= 1;
     if (right) x += 1;
     if (up) y -= 1;
@@ -143,5 +249,8 @@ const EcoInput = (() => {
     return { x, y };
   }
 
-  return { bind, consumePing, consumePause, movement };
+  return {
+    bind, consumePing, peekPing, consumePause, consumeNudges,
+    movement, markLevelStart, shouldDiscardPingOutsidePlay, releaseAllDirs, isHeld,
+  };
 })();

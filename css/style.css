@@ -14,8 +14,8 @@
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
   --safe-r: env(safe-area-inset-right, 0px);
-  --pad: 60px;
-  --ping: 104px;
+  --pad: 56px;
+  --ping: 100px;
   --ctrl-gap: 18px;
 }
 
@@ -135,7 +135,7 @@ html, body {
   display: grid;
   grid-template-columns: var(--pad) var(--pad) var(--pad);
   grid-template-rows: var(--pad) var(--pad) var(--pad);
-  gap: 5px;
+  gap: 8px;
   pointer-events: auto;
   touch-action: none;
   filter: drop-shadow(0 2px 8px rgba(0,0,0,0.55));
@@ -206,8 +206,8 @@ html, body {
 /* ~390px portrait tuning */
 @media (max-width: 420px) {
   :root {
-    --pad: 58px;
-    --ping: 100px;
+    --pad: 54px;
+    --ping: 96px;
   }
   .hud { font-size: 0.88rem; }
   .hud-left { padding: 5px 8px; gap: 8px; }
@@ -217,10 +217,10 @@ html, body {
 
 @media (max-height: 700px) and (max-width: 500px) {
   :root {
-    --pad: 52px;
+    --pad: 50px;
     --ping: 88px;
   }
-  .dpad { bottom: calc(10px + var(--safe-b)); gap: 4px; }
+  .dpad { bottom: calc(10px + var(--safe-b)); gap: 7px; }
   .ping-btn { bottom: calc(14px + var(--safe-b)); font-size: 0.9rem; }
 }
 

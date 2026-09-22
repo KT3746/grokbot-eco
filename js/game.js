@@ -1,8 +1,8 @@
 /* ECO — motor Canvas 2D */
 const EcoGame = (() => {
   const TILE = 40;
-  const PLAYER_R = 0.28;
-  const SPEED = 4.2; // tiles/s — snappier mobile
+  const PLAYER_R = 0.24;
+  const SPEED = 2.95; // tiles/s — precisão de corredor
   const PING_DURATION = 1.0;
   const PING_RADIUS = 7.5; // tiles
   const MEMORY_FADE = 4.2; // segundos após ping local
@@ -128,33 +128,63 @@ const EcoGame = (() => {
     const nx = player.x + dx;
     const ny = player.y + dy;
     if (!collides(nx, player.y)) { player.x = nx; moved = true; }
-    else {
+    else if (dx) {
       const tryX = player.x + Math.sign(dx) * Math.abs(dx);
-      if (dx && !collides(tryX, player.y)) { player.x = tryX; moved = true; }
+      if (!collides(tryX, player.y)) { player.x = tryX; moved = true; }
     }
     if (!collides(player.x, ny)) { player.y = ny; moved = true; }
-    else {
+    else if (dy) {
       const tryY = player.y + Math.sign(dy) * Math.abs(dy);
-      if (dy && !collides(player.x, tryY)) { player.y = tryY; moved = true; }
+      if (!collides(player.x, tryY)) { player.y = tryY; moved = true; }
     }
     return moved;
   }
 
-  function movePlayer(dt) {
-    // Nudge imediato no toque do D-pad (tap curto ainda desloca)
-    if (EcoInput.consumeNudges) {
-      for (const n of EcoInput.consumeNudges()) {
-        tryMoveDelta(n.x, n.y);
-        stepAcc += 0.4;
+  function corridorAssist(dt, moveX, moveY) {
+    // Puxa o eixo perpendicular para o centro do tile (menos raspagem de parede)
+    const rate = 5.5 * dt; // suave
+    if (Math.abs(moveX) > Math.abs(moveY) && Math.abs(moveX) > 0.01) {
+      const targetY = Math.floor(player.y) + 0.5;
+      const dy = targetY - player.y;
+      if (Math.abs(dy) > 0.01) {
+        const step = Math.sign(dy) * Math.min(Math.abs(dy), rate);
+        if (!collides(player.x, player.y + step)) player.y += step;
+      }
+    } else if (Math.abs(moveY) > 0.01) {
+      const targetX = Math.floor(player.x) + 0.5;
+      const dx = targetX - player.x;
+      if (Math.abs(dx) > 0.01) {
+        const step = Math.sign(dx) * Math.min(Math.abs(dx), rate);
+        if (!collides(player.x + step, player.y)) player.x += step;
       }
     }
+  }
 
+  function microSnapToCenters() {
+    // Para limpo no meio da célula se estiver perto e livre
+    const cx = Math.floor(player.x) + 0.5;
+    const cy = Math.floor(player.y) + 0.5;
+    let nx = player.x;
+    let ny = player.y;
+    if (Math.abs(player.x - cx) < 0.12) nx = cx;
+    if (Math.abs(player.y - cy) < 0.12) ny = cy;
+    if ((nx !== player.x || ny !== player.y) && !collides(nx, ny)) {
+      player.x = nx;
+      player.y = ny;
+    }
+  }
+
+  function movePlayer(dt) {
     const m = EcoInput.movement();
-    if (!m.x && !m.y) return;
+    if (!m.x && !m.y) {
+      if (m.justReleased) microSnapToCenters();
+      return;
+    }
     tryMoveDelta(m.x * SPEED * dt, m.y * SPEED * dt);
+    corridorAssist(dt, m.x, m.y);
 
     stepAcc += Math.hypot(m.x, m.y) * SPEED * dt;
-    if (stepAcc > 0.55) {
+    if (stepAcc > 0.6) {
       stepAcc = 0;
       EcoAudio.footstep();
     }
@@ -323,7 +353,7 @@ const EcoGame = (() => {
     // camera lag — jogador “deriva” alguns px ao andar (movimento óbvio)
     const follow = state === 'play' || state === 'pause' || state === 'death' || state === 'win';
     if (follow && level) {
-      const lerp = Math.min(1, 3.0 * dt); // ~0.05/frame @60fps — atraso perceptível
+      const lerp = Math.min(1, 12 * dt); // follow apertado — mira previsível
       cam.x += (player.x - cam.x) * lerp;
       cam.y += (player.y - cam.y) * lerp;
     }

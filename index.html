@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#030508" />
+  <meta name="description" content="ECO — explore a caverna no escuro com eco-localização" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>ECO</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23030508'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%2340e0d0' stroke-width='3' opacity='0.9'/%3E%3Ccircle cx='32' cy='32' r='8' fill='none' stroke='%2340e0d0' stroke-width='2' opacity='0.5'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23c8fff5'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" aria-label="Área do jogo ECO"></canvas>
+
+    <div id="hud" class="hud hidden" aria-live="polite">
+      <div class="hud-left">
+        <span id="hud-phase">Fase 1</span>
+        <span id="hud-crystals">✦ 0/0</span>
+      </div>
+      <div class="hud-right">
+        <button type="button" id="btn-mute" class="icon-btn" aria-label="Mudo">🔊</button>
+        <button type="button" id="btn-pause" class="icon-btn" aria-label="Pausar">❚❚</button>
+      </div>
+    </div>
+
+    <div id="hint-bar" class="hint-bar hidden">Toque / Espaço = PING · Memória é sua bússola</div>
+
+    <!-- Controles touch -->
+    <div id="touch" class="touch hidden" aria-hidden="true">
+      <div class="dpad">
+        <button type="button" class="pad" data-dir="up" aria-label="Cima">▲</button>
+        <div class="pad-row">
+          <button type="button" class="pad" data-dir="left" aria-label="Esquerda">◀</button>
+          <button type="button" class="pad" data-dir="down" aria-label="Baixo">▼</button>
+          <button type="button" class="pad" data-dir="right" aria-label="Direita">▶</button>
+        </div>
+      </div>
+      <button type="button" id="btn-ping" class="ping-btn" aria-label="Eco-localização">PING</button>
+    </div>
+
+    <!-- Menu principal -->
+    <section id="screen-menu" class="overlay screen" aria-label="Menu">
+      <div class="panel">
+        <p class="eyebrow">caverna · eco-localização</p>
+        <h1 class="logo">ECO</h1>
+        <p class="tagline">No escuro, o som é a sua visão.</p>
+        <p class="rule">Saída sempre aberta · pontuação = cristais</p>
+        <button type="button" id="btn-play" class="btn primary">Jogar</button>
+        <button type="button" id="btn-mute-menu" class="btn ghost">Mudo: off</button>
+      </div>
+    </section>
+
+    <!-- Dica primeira vez -->
+    <section id="screen-tip" class="overlay screen hidden" aria-label="Dica">
+      <div class="panel tip-panel">
+        <h2>Como jogar</h2>
+        <ul class="tips">
+          <li><strong>PING</strong> (toque / Espaço) revela a caverna por um instante.</li>
+          <li>Ande no escuro usando a memória do eco.</li>
+          <li>Colete <span class="c-teal">cristais ✦</span>, evite <span class="c-danger">buracos</span>.</li>
+          <li>Alcance o <span class="c-warm">brilho da saída</span>.</li>
+        </ul>
+        <p class="rule">WASD / setas · Espaço = ping · Esc = pausa</p>
+        <button type="button" id="btn-tip-ok" class="btn primary">Entendi</button>
+      </div>
+    </section>
+
+    <!-- Pausa -->
+    <section id="screen-pause" class="overlay screen hidden" aria-label="Pausa">
+      <div class="panel">
+        <h2>Pausado</h2>
+        <button type="button" id="btn-resume" class="btn primary">Continuar</button>
+        <button type="button" id="btn-restart" class="btn">Reiniciar fase</button>
+        <button type="button" id="btn-menu" class="btn ghost">Menu</button>
+      </div>
+    </section>
+
+    <!-- Morte -->
+    <section id="screen-death" class="overlay screen hidden" aria-label="Derrota">
+      <div class="panel">
+        <h2>Queda…</h2>
+        <p class="tagline">O escuro engoliu você.</p>
+        <button type="button" id="btn-retry" class="btn primary">Reiniciar</button>
+        <button type="button" id="btn-death-menu" class="btn ghost">Menu</button>
+      </div>
+    </section>
+
+    <!-- Vitória de fase -->
+    <section id="screen-win" class="overlay screen hidden" aria-label="Vitória">
+      <div class="panel">
+        <h2 id="win-title">Fase concluída!</h2>
+        <p id="win-score" class="tagline">Cristais: 0/0</p>
+        <button type="button" id="btn-next" class="btn primary">Próxima fase</button>
+        <button type="button" id="btn-win-menu" class="btn ghost">Menu</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

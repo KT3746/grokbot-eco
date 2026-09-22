@@ -2,12 +2,13 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#030508" />
   <meta name="description" content="ECO — explore a caverna no escuro com eco-localização" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>ECO</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=202609220426" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23030508'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%2340e0d0' stroke-width='3' opacity='0.9'/%3E%3Ccircle cx='32' cy='32' r='8' fill='none' stroke='%2340e0d0' stroke-width='2' opacity='0.5'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23c8fff5'/%3E%3C/svg%3E" />
 </head>
 <body>
@@ -25,17 +26,16 @@
       </div>
     </div>
 
-    <div id="hint-bar" class="hint-bar hidden">Toque / Espaço = PING · Memória é sua bússola</div>
+    <div id="hint-bar" class="hint-bar hidden">Toque / Espaço = PING</div>
 
-    <!-- Controles touch -->
+    <!-- Controles touch: cantos inferiores, semi-transparentes -->
     <div id="touch" class="touch hidden" aria-hidden="true">
-      <div class="dpad">
-        <button type="button" class="pad" data-dir="up" aria-label="Cima">▲</button>
-        <div class="pad-row">
-          <button type="button" class="pad" data-dir="left" aria-label="Esquerda">◀</button>
-          <button type="button" class="pad" data-dir="down" aria-label="Baixo">▼</button>
-          <button type="button" class="pad" data-dir="right" aria-label="Direita">▶</button>
-        </div>
+      <div class="dpad" role="group" aria-label="Movimento">
+        <button type="button" class="pad pad-up" data-dir="up" aria-label="Cima">▲</button>
+        <button type="button" class="pad pad-left" data-dir="left" aria-label="Esquerda">◀</button>
+        <span class="pad-hub" aria-hidden="true"></span>
+        <button type="button" class="pad pad-right" data-dir="right" aria-label="Direita">▶</button>
+        <button type="button" class="pad pad-down" data-dir="down" aria-label="Baixo">▼</button>
       </div>
       <button type="button" id="btn-ping" class="ping-btn" aria-label="Eco-localização">PING</button>
     </div>
@@ -57,12 +57,12 @@
       <div class="panel tip-panel">
         <h2>Como jogar</h2>
         <ul class="tips">
-          <li><strong>PING</strong> (toque / Espaço) revela a caverna por um instante.</li>
+          <li><strong>PING</strong> (botão / Espaço) revela a caverna por um instante.</li>
           <li>Ande no escuro usando a memória do eco.</li>
           <li>Colete <span class="c-teal">cristais ✦</span>, evite <span class="c-danger">buracos</span>.</li>
           <li>Alcance o <span class="c-warm">brilho da saída</span>.</li>
         </ul>
-        <p class="rule">WASD / setas · Espaço = ping · Esc = pausa</p>
+        <p class="rule">D-pad · PING · Esc = pausa</p>
         <button type="button" id="btn-tip-ok" class="btn primary">Entendi</button>
       </div>
     </section>
@@ -98,11 +98,11 @@
     </section>
   </div>
 
-  <script src="js/audio.js"></script>
-  <script src="js/levels.js"></script>
-  <script src="js/input.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/game.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/audio.js?v=202609220426"></script>
+  <script src="js/levels.js?v=202609220426"></script>
+  <script src="js/input.js?v=202609220426"></script>
+  <script src="js/ui.js?v=202609220426"></script>
+  <script src="js/game.js?v=202609220426"></script>
+  <script src="js/main.js?v=202609220426"></script>
 </body>
 </html>

@@ -23,18 +23,27 @@ const EcoGame = (() => {
   let lastTs = 0;
   let stepAcc = 0;
   let reduceMotion = false;
+  let lowFx = false; // mobile / coarse pointer: cheaper draw
   let onWin = null;
   let onDeath = null;
 
+  function refreshFxFlags() {
+    reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const narrow = window.matchMedia('(max-width: 900px)').matches;
+    lowFx = reduceMotion || coarse || narrow;
+  }
+
   function init(c, hooks) {
     canvas = c;
-    ctx = canvas.getContext('2d');
+    ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
     onWin = hooks.onWin;
     onDeath = hooks.onDeath;
-    reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (e) => {
-      reduceMotion = e.matches;
-    });
+    refreshFxFlags();
+    try {
+      window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', refreshFxFlags);
+      window.matchMedia('(pointer: coarse)').addEventListener('change', refreshFxFlags);
+    } catch (_) {}
     resize();
     window.addEventListener('resize', resize);
     EcoInput.bind(canvas);
@@ -231,8 +240,18 @@ const EcoGame = (() => {
   }
 
   function spawnSparkle(x, y, color) {
-    if (reduceMotion) {
-      particles.push({ x, y, vx: 0, vy: 0, life: 0.4, max: 0.4, color, r: 3 });
+    if (reduceMotion || lowFx) {
+      particles.push({ x, y, vx: 0, vy: 0, life: 0.35, max: 0.35, color, r: 3 });
+      if (lowFx && !reduceMotion) {
+        for (let i = 0; i < 5; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const sp = 0.6 + Math.random() * 1.6;
+          particles.push({
+            x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+            life: 0.3 + Math.random() * 0.35, max: 0.7, color, r: 1.5 + Math.random() * 1.5,
+          });
+        }
+      }
       return;
     }
     for (let i = 0; i < 14; i++) {
@@ -323,9 +342,12 @@ const EcoGame = (() => {
     }
 
     let ox = 0, oy = 0;
-    if (shake > 0 && !reduceMotion) {
-      ox = (Math.random() - 0.5) * shake * 18;
-      oy = (Math.random() - 0.5) * shake * 18;
+    if (shake > 0 && !reduceMotion && !lowFx) {
+      ox = (Math.random() - 0.5) * shake * 14;
+      oy = (Math.random() - 0.5) * shake * 14;
+    } else if (shake > 0 && lowFx && !reduceMotion) {
+      ox = (Math.random() - 0.5) * shake * 6;
+      oy = (Math.random() - 0.5) * shake * 6;
     }
     ctx.save();
     ctx.translate(ox, oy);
@@ -402,7 +424,7 @@ const EcoGame = (() => {
       const sz = 7 * pulse;
       ctx.fillStyle = '#40e0d0';
       ctx.shadowColor = '#40e0d0';
-      ctx.shadowBlur = reduceMotion ? 0 : 12;
+      ctx.shadowBlur = (reduceMotion || lowFx) ? 0 : 12;
       ctx.fillRect(-sz / 2, -sz / 2, sz, sz);
       ctx.restore();
     }
@@ -471,8 +493,14 @@ const EcoGame = (() => {
   }
 
   function drawAmbient() {
-    // subtle scan noise
+    // subtle scan noise — skipped/cheap on mobile for 60fps
     if (reduceMotion) return;
+    if (lowFx) {
+      ctx.fillStyle = 'rgba(64, 224, 208, 0.02)';
+      const y = (performance.now() * 0.015) % H;
+      ctx.fillRect(0, y, W, 1);
+      return;
+    }
     ctx.fillStyle = 'rgba(64, 224, 208, 0.015)';
     for (let i = 0; i < 18; i++) {
       const y = (performance.now() * 0.02 + i * 37) % H;

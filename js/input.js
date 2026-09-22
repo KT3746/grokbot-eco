@@ -1,37 +1,57 @@
-/* ECO — teclado + toque */
+/* ECO — teclado + toque (mobile-safe) */
 const EcoInput = (() => {
   const keys = Object.create(null);
-  const dirs = { up: false, down: false, left: false, right: false };
+  const touchDirs = { up: false, down: false, left: false, right: false };
   let pingQueued = false;
   let pauseQueued = false;
-  let canvasTapPing = true;
+  let blockCanvasPingUntil = 0;
+  let tapX = 0, tapY = 0, tapId = null, tapAt = 0;
 
   function bind(canvas) {
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       keys[k] = true;
-      if (['arrowup','arrowdown','arrowleft','arrowright',' ','space'].includes(k) || k === ' ') {
+      if (k === 'arrowup' || k === 'arrowdown' || k === 'arrowleft' || k === 'arrowright' || k === ' ' || k === 'spacebar') {
         e.preventDefault();
       }
       if (k === ' ' || k === 'spacebar') pingQueued = true;
       if (k === 'escape') pauseQueued = true;
-      syncDirs();
     }, { passive: false });
 
     window.addEventListener('keyup', (e) => {
       keys[e.key.toLowerCase()] = false;
-      syncDirs();
     });
 
-    // D-pad
-    document.querySelectorAll('.pad').forEach((btn) => {
+    const blockScroll = (e) => {
+      const t = e.target;
+      if (t && t.closest && t.closest('.overlay')) return;
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', blockScroll, { passive: false });
+    document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+
+    document.querySelectorAll('.pad[data-dir]').forEach((btn) => {
       const d = btn.dataset.dir;
-      const on = (ev) => { ev.preventDefault(); dirs[d] = true; btn.classList.add('is-down'); };
-      const off = (ev) => { ev.preventDefault(); dirs[d] = false; btn.classList.remove('is-down'); };
+      const on = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        touchDirs[d] = true;
+        btn.classList.add('is-down');
+        blockCanvasPingUntil = performance.now() + 280;
+        try { btn.setPointerCapture(ev.pointerId); } catch (_) {}
+      };
+      const off = (ev) => {
+        if (ev && ev.preventDefault) ev.preventDefault();
+        touchDirs[d] = false;
+        btn.classList.remove('is-down');
+      };
       btn.addEventListener('pointerdown', on);
       btn.addEventListener('pointerup', off);
-      btn.addEventListener('pointerleave', off);
       btn.addEventListener('pointercancel', off);
+      btn.addEventListener('lostpointercapture', () => {
+        touchDirs[d] = false;
+        btn.classList.remove('is-down');
+      });
     });
 
     const pingBtn = document.getElementById('btn-ping');
@@ -39,30 +59,62 @@ const EcoInput = (() => {
       pingBtn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        pingBtn.classList.add('is-down');
+        blockCanvasPingUntil = performance.now() + 350;
+        try { pingBtn.setPointerCapture(e.pointerId); } catch (_) {}
         pingQueued = true;
-        canvasTapPing = false;
-        setTimeout(() => { canvasTapPing = true; }, 300);
+      });
+      const pingEnd = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        pingBtn.classList.remove('is-down');
+      };
+      pingBtn.addEventListener('pointerup', pingEnd);
+      pingBtn.addEventListener('pointercancel', pingEnd);
+      pingBtn.addEventListener('pointermove', (e) => {
+        if (pingBtn.classList.contains('is-down')) e.preventDefault();
       });
     }
 
-    // Tap no canvas = ping (quando não for nos controles)
     canvas.addEventListener('pointerdown', (e) => {
-      if (!canvasTapPing) return;
-      // ignorar se toque veio da UI de baixo
-      const touch = document.getElementById('touch');
-      if (touch && !touch.classList.contains('hidden')) {
-        const r = touch.getBoundingClientRect();
-        if (e.clientY >= r.top - 8) return;
-      }
-      pingQueued = true;
+      if (performance.now() < blockCanvasPingUntil) return;
+      if (e.target !== canvas) return;
+      if (inControlZone(e.clientX, e.clientY)) return;
+      tapId = e.pointerId;
+      tapX = e.clientX;
+      tapY = e.clientY;
+      tapAt = performance.now();
     });
+
+    canvas.addEventListener('pointerup', (e) => {
+      if (tapId !== e.pointerId) return;
+      const dt = performance.now() - tapAt;
+      const dist = Math.hypot(e.clientX - tapX, e.clientY - tapY);
+      tapId = null;
+      if (dt < 280 && dist < 18) {
+        if (performance.now() < blockCanvasPingUntil) return;
+        if (inControlZone(e.clientX, e.clientY)) return;
+        pingQueued = true;
+      }
+    });
+
+    canvas.addEventListener('pointercancel', () => { tapId = null; });
   }
 
-  function syncDirs() {
-    dirs.up = !!(keys['w'] || keys['arrowup']);
-    dirs.down = !!(keys['s'] || keys['arrowdown']);
-    dirs.left = !!(keys['a'] || keys['arrowleft']);
-    dirs.right = !!(keys['d'] || keys['arrowright']);
+  function inControlZone(x, y) {
+    const touch = document.getElementById('touch');
+    if (!touch || touch.classList.contains('hidden')) return false;
+    const dpad = touch.querySelector('.dpad');
+    const ping = document.getElementById('btn-ping');
+    const pad = 14;
+    for (const el of [dpad, ping]) {
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad) {
+        return true;
+      }
+    }
+    if (y > window.innerHeight * 0.78) return true;
+    return false;
   }
 
   function consumePing() {
@@ -79,11 +131,15 @@ const EcoInput = (() => {
 
   function movement() {
     let x = 0, y = 0;
-    if (dirs.left) x -= 1;
-    if (dirs.right) x += 1;
-    if (dirs.up) y -= 1;
-    if (dirs.down) y += 1;
-    if (x && y) { const inv = 1 / Math.sqrt(2); x *= inv; y *= inv; }
+    const up = touchDirs.up || keys['w'] || keys['arrowup'];
+    const down = touchDirs.down || keys['s'] || keys['arrowdown'];
+    const left = touchDirs.left || keys['a'] || keys['arrowleft'];
+    const right = touchDirs.right || keys['d'] || keys['arrowright'];
+    if (left) x -= 1;
+    if (right) x += 1;
+    if (up) y -= 1;
+    if (down) y += 1;
+    if (x && y) { const inv = 1 / Math.SQRT2; x *= inv; y *= inv; }
     return { x, y };
   }
 

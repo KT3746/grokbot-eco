@@ -1,5 +1,5 @@
 /* ECO — teclado + toque (cardinal-only, precisão de labirinto) */
-const EcoInput = (() => {
+export const EcoInput = (() => {
   const keys = Object.create(null);
   const DIR_VEC = {
     up: { x: 0, y: -1 },

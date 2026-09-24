@@ -25,16 +25,20 @@ Interface **somente em português (PT-BR)**.
 
 ## Técnico
 
-Site estático na raiz do repositório (GitHub Pages). Vanilla JS + Canvas 2D + Web Audio API. Sem build, sem npm.
+Site estático na raiz do repositório (GitHub Pages). Vanilla JS + **Three.js** (ES modules, vendor local) + Web Audio API. Sem build, sem npm.
 
 ```
-index.html
+index.html          (importmap → three)
 css/style.css
+js/vendor/three.module.js
+js/render3d.js      (cena low-poly / FogExp2 / ping light)
 js/audio.js  levels.js  input.js  ui.js  game.js  main.js
 .nojekyll
 ```
 
-Respeita `prefers-reduced-motion` (menos shake/partículas).
+Visuais 3D: paredes/chão extrudados do mapa de tiles, atmosfera escura com névoa, PING como PointLight expansivo, cristais e saída emissivos. Câmera top-down inclinada (~38°). Gameplay (colisão, D-pad cardinal, SPEED) permanece em espaço de tiles.
+
+Mobile: `pixelRatio` limitado, antialias off, sem sombras, poucos draw calls (InstancedMesh). Respeita `prefers-reduced-motion`.
 
 ## Licença
 

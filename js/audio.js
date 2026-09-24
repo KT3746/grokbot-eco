@@ -1,5 +1,5 @@
 /* ECO — Web Audio API synths */
-const EcoAudio = (() => {
+export const EcoAudio = (() => {
   let ctx = null;
   let muted = false;
   let master = null;

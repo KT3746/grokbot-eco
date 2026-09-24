@@ -1,7 +1,7 @@
 /* ECO — fases artesanais
    # parede  . chão  P início  C cristal  X buraco/espinho  E saída
 */
-const EcoLevels = (() => {
+export const EcoLevels = (() => {
   const LEVELS = [
     {
       name: 'Eco inicial',

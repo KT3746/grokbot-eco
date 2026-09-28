@@ -98,7 +98,19 @@ export const EcoAudio = (() => {
     tone(400, 0.06, 'square', 0.06);
   }
 
+  function suspend() {
+    if (ctx && ctx.state === 'running') {
+      try { ctx.suspend(); } catch (_) { /* ok */ }
+    }
+  }
+
+  function resume() {
+    if (!muted && ctx && ctx.state === 'suspended') {
+      try { ctx.resume(); } catch (_) { /* ok */ }
+    }
+  }
+
   loadMute();
 
-  return { ensure, setMuted, isMuted, ping, collect, death, win, footstep, ui };
+  return { ensure, setMuted, isMuted, ping, collect, death, win, footstep, ui, suspend, resume };
 })();

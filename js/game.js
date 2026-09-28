@@ -1,9 +1,9 @@
 /* ECO — motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202609241415';
-import { EcoInput } from './input.js?v=202609241415';
-import { EcoAudio } from './audio.js?v=202609241415';
-import { EcoUI } from './ui.js?v=202609241415';
-import { EcoRender3D } from './render3d.js?v=202609241415';
+import { EcoLevels } from './levels.js?v=202609281307';
+import { EcoInput } from './input.js?v=202609281307';
+import { EcoAudio } from './audio.js?v=202609281307';
+import { EcoUI } from './ui.js?v=202609281307';
+import { EcoRender3D } from './render3d.js?v=202609281307';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
@@ -284,6 +284,12 @@ export const EcoGame = (() => {
   }
 
   function frame(ts) {
+    /* Aba/app oculta: não simula nem renderiza (dt efetivo = 0). */
+    if (document.hidden) {
+      lastTs = ts;
+      requestAnimationFrame(frame);
+      return;
+    }
     if (!lastTs) lastTs = ts;
     let dt = (ts - lastTs) / 1000;
     lastTs = ts;

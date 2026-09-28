@@ -234,9 +234,11 @@ export const EcoInput = (() => {
       pingBtn.addEventListener('mouseup', pingUp);
     }
 
-    canvas.addEventListener('pointerdown', (e) => {
+    /* Canvas usa pointer-events:none — toque no centro cai em #app; HUD/D-pad ficam de fora. */
+    const tapRoot = document.getElementById('app') || canvas;
+    tapRoot.addEventListener('pointerdown', (e) => {
       if (performance.now() < blockCanvasPingUntil) return;
-      if (e.target !== canvas) return;
+      if (e.target.closest && (e.target.closest('.pad') || e.target.closest('.ping-btn') || e.target.closest('.icon-btn') || e.target.closest('.overlay') || e.target.closest('.btn'))) return;
       if (inControlZone(e.clientX, e.clientY)) return;
       tapId = e.pointerId;
       tapX = e.clientX;
@@ -244,7 +246,7 @@ export const EcoInput = (() => {
       tapAt = performance.now();
     });
 
-    canvas.addEventListener('pointerup', (e) => {
+    tapRoot.addEventListener('pointerup', (e) => {
       if (tapId !== e.pointerId) return;
       const dt = performance.now() - tapAt;
       const dist = Math.hypot(e.clientX - tapX, e.clientY - tapY);
@@ -256,7 +258,7 @@ export const EcoInput = (() => {
       }
     });
 
-    canvas.addEventListener('pointercancel', () => { tapId = null; });
+    tapRoot.addEventListener('pointercancel', () => { tapId = null; });
   }
 
   function inControlZone(x, y) {

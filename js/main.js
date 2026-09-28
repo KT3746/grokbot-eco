@@ -1,8 +1,9 @@
 /* ECO — bootstrap (ES module) */
-import { EcoAudio } from './audio.js?v=202609241415';
-import { EcoLevels } from './levels.js?v=202609241415';
-import { EcoUI } from './ui.js?v=202609241415';
-import { EcoGame } from './game.js?v=202609241415';
+import { EcoAudio } from './audio.js?v=202609281307';
+import { EcoLevels } from './levels.js?v=202609281307';
+import { EcoUI } from './ui.js?v=202609281307';
+import { EcoGame } from './game.js?v=202609281307';
+import { EcoInput } from './input.js?v=202609281307';
 
 const canvas = document.getElementById('game');
 
@@ -34,6 +35,7 @@ EcoUI.$('btn-tip-ok').addEventListener('click', () => {
 
 EcoUI.$('btn-resume').addEventListener('click', () => {
   EcoAudio.ui();
+  try { EcoAudio.resume(); } catch (_) { /* ok */ }
   EcoGame.setState('play');
   EcoUI.hideAllOverlays();
   EcoUI.setPlaying(true);
@@ -72,6 +74,8 @@ EcoUI.$('btn-pause').addEventListener('click', () => {
   EcoAudio.ui();
   EcoGame.setState('pause');
   EcoUI.show('screen-pause');
+  try { EcoAudio.suspend(); } catch (_) { /* ok */ }
+  try { EcoInput.releaseAllDirs(); } catch (_) { /* ok */ }
 });
 
 function toggleMute() {
@@ -85,3 +89,17 @@ EcoUI.$('btn-mute-menu').addEventListener('click', toggleMute);
 
 EcoUI.show('screen-menu');
 EcoUI.setPlaying(false);
+
+/* Aba/app oculta mid-jogo: pausa + suspende áudio (mesmo bar 1945/TETROK/MERCADINHO). */
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    /* Continuar na pausa: áudio só volta com resume / Continuar. */
+    return;
+  }
+  try { EcoAudio.suspend(); } catch (_) { /* ok */ }
+  if (EcoGame.getState() === 'play') {
+    EcoGame.setState('pause');
+    EcoUI.show('screen-pause');
+    try { EcoInput.releaseAllDirs(); } catch (_) { /* ok */ }
+  }
+});

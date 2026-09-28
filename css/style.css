@@ -48,6 +48,7 @@ html, body {
   height: 100%;
   background: #010204;
   touch-action: none;
+  pointer-events: none; /* toque cai em #app / controles; HUD fica de fora */
 }
 
 .hidden { display: none !important; }
@@ -93,6 +94,7 @@ html, body {
   border: 1px solid rgba(64, 224, 208, 0.4);
   color: var(--text);
   width: 44px; height: 44px;
+  min-width: 44px; min-height: 44px;
   border-radius: 12px;
   font-size: 1rem;
   cursor: pointer;
@@ -155,6 +157,8 @@ html, body {
 .pad {
   width: var(--pad);
   height: var(--pad);
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 16px;
   border: 1.5px solid rgba(64, 224, 208, 0.45);
   background: rgba(8, 18, 28, 0.42);
@@ -183,6 +187,8 @@ html, body {
   pointer-events: auto;
   width: var(--ping);
   height: var(--ping);
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 50%;
   border: 2.5px solid rgba(64, 224, 208, 0.75);
   background: radial-gradient(circle at 40% 35%, rgba(64,224,208,0.38), rgba(6,14,22,0.45));
@@ -203,15 +209,15 @@ html, body {
   box-shadow: 0 0 32px rgba(64, 224, 208, 0.45);
 }
 
-/* ~390px portrait tuning */
-@media (max-width: 420px) {
+/* Portrait estreito (~390px): HUD compacto, alvos ≥44px */
+@media (max-width: 420px), (orientation: portrait) and (max-width: 430px) {
   :root {
     --pad: 54px;
     --ping: 96px;
   }
-  .hud { font-size: 0.88rem; }
+  .hud { font-size: 0.88rem; padding-top: calc(8px + var(--safe-t)); }
   .hud-left { padding: 5px 8px; gap: 8px; }
-  .icon-btn { width: 42px; height: 42px; }
+  .icon-btn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
   .hint-bar { font-size: 0.68rem; }
 }
 
@@ -222,6 +228,28 @@ html, body {
   }
   .dpad { bottom: calc(10px + var(--safe-b)); gap: 7px; }
   .ping-btn { bottom: calc(14px + var(--safe-b)); font-size: 0.9rem; }
+}
+
+/* Paisagem baixa (~390px de altura) */
+@media (orientation: landscape) and (max-height: 430px) {
+  :root {
+    --pad: 44px;
+    --ping: 72px;
+  }
+  .hud {
+    font-size: 0.8rem;
+    padding: calc(4px + var(--safe-t)) 8px 4px;
+    padding-left: calc(8px + var(--safe-l));
+    padding-right: calc(8px + var(--safe-r));
+  }
+  .hud-left { padding: 3px 7px; gap: 6px; }
+  .icon-btn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  .hint-bar { top: calc(48px + var(--safe-t)); font-size: 0.62rem; padding: 3px 10px; }
+  .dpad { bottom: calc(6px + var(--safe-b)); gap: 5px; left: calc(6px + var(--safe-l)); }
+  .ping-btn { bottom: calc(8px + var(--safe-b)); font-size: 0.8rem; }
+  .panel { padding: 14px 14px 12px; max-height: min(92dvh, 360px); overflow: auto; }
+  .logo { font-size: clamp(1.8rem, 8vw, 2.4rem); margin-bottom: 4px; }
+  .btn { min-height: 44px; padding: 10px 14px; }
 }
 
 /* Desktop com ponteiro fino: esconde touch */
@@ -328,7 +356,10 @@ html, body {
 .c-warm { color: var(--warm); }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn, .pad, .ping-btn, .icon-btn { transition: none !important; }
+  .btn, .pad, .ping-btn, .icon-btn { transition: none !important; animation: none !important; }
+  .btn:active, .pad:active, .pad.is-down, .ping-btn:active, .ping-btn.is-down, .icon-btn:active {
+    transform: none !important;
+  }
   .overlay { backdrop-filter: none; }
   .hud-left, .pad, .ping-btn { backdrop-filter: none; }
 }

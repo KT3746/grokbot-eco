@@ -68,7 +68,8 @@ export const EcoRender3D = (() => {
         powerPreference: 'high-performance',
         alpha: false,
       });
-      const dprCap = lowFx ? (window.matchMedia('(pointer: coarse)').matches ? 1 : 1.5) : 1.5;
+      /* Cap phone ~1.25 (mesmo bar 1945/TETROK/MERCADINHO); desktop até 1.5. */
+      const dprCap = lowFx ? 1.25 : 1.5;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap));
       renderer.setSize(window.innerWidth, window.innerHeight, false);
       if (renderer.outputColorSpace !== undefined) renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -139,10 +140,13 @@ export const EcoRender3D = (() => {
 
   function resize() {
     if (!renderer || !camera) return;
+    refreshFx();
     const w = window.innerWidth;
     const h = window.innerHeight;
     camera.aspect = w / Math.max(1, h);
     camera.updateProjectionMatrix();
+    const dprCap = lowFx ? 1.25 : 1.5;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap));
     renderer.setSize(w, h, false);
   }
 

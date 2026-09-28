@@ -1,4 +1,4 @@
-import { EcoAudio } from './audio.js?v=202609241415';
+import { EcoAudio } from './audio.js?v=202609281307';
 /* ECO — telas PT-BR */
 export const EcoUI = (() => {
   const $ = (id) => document.getElementById(id);

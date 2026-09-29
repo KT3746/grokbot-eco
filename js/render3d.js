@@ -376,7 +376,12 @@ export const EcoRender3D = (() => {
   }
 
   function setShake(v) { shake = Math.max(shake, v); }
-  function setFlash(v) { flash = Math.max(flash, v); }
+  function setFlash(v, colorHex) {
+    flash = Math.max(flash, v);
+    if (flashMesh && colorHex != null) {
+      flashMesh.material.color.setHex(colorHex);
+    }
+  }
 
   function syncPlayer(px, py) {
     if (!playerRoot) return;

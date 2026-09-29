@@ -121,6 +121,32 @@ html, body {
   max-width: calc(100vw - 24px);
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+/* First-minute: some após 1º PING/movimento */
+.hint-bar.is-leaving {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-6px);
+}
+
+/* Light juice — PING / cristal (DOM) */
+.ping-btn.juice-pulse {
+  animation: eco-ping-pulse 0.38s ease-out;
+}
+@keyframes eco-ping-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(64, 224, 208, 0.55); }
+  70% { box-shadow: 0 0 0 14px rgba(64, 224, 208, 0); }
+  100% { box-shadow: 0 8px 22px rgba(0,0,0,0.45), 0 0 0 0 rgba(64, 224, 208, 0); }
+}
+#hud-crystals.juice-pop {
+  display: inline-block;
+  animation: eco-crystal-pop 0.36s ease-out;
+  color: #c8fff5;
+}
+@keyframes eco-crystal-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.22); }
+  100% { transform: scale(1); }
 }
 
 /* Touch controls — cantos, semi-transparentes, não cobrem o centro */
@@ -356,10 +382,12 @@ html, body {
 .c-warm { color: var(--warm); }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn, .pad, .ping-btn, .icon-btn { transition: none !important; animation: none !important; }
+  .btn, .pad, .ping-btn, .icon-btn, .hint-bar { transition: none !important; animation: none !important; }
   .btn:active, .pad:active, .pad.is-down, .ping-btn:active, .ping-btn.is-down, .icon-btn:active {
     transform: none !important;
   }
+  .ping-btn.juice-pulse, #hud-crystals.juice-pop { animation: none !important; }
+  .hint-bar.is-leaving { opacity: 0; transform: translateX(-50%); }
   .overlay { backdrop-filter: none; }
   .hud-left, .pad, .ping-btn { backdrop-filter: none; }
 }

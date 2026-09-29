@@ -1,9 +1,9 @@
 /* ECO — motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202609281307';
-import { EcoInput } from './input.js?v=202609281307';
-import { EcoAudio } from './audio.js?v=202609281307';
-import { EcoUI } from './ui.js?v=202609281307';
-import { EcoRender3D } from './render3d.js?v=202609281307';
+import { EcoLevels } from './levels.js?v=202609290141';
+import { EcoInput } from './input.js?v=202609290141';
+import { EcoAudio } from './audio.js?v=202609290141';
+import { EcoUI } from './ui.js?v=202609290141';
+import { EcoRender3D } from './render3d.js?v=202609290141';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
@@ -22,6 +22,7 @@ export const EcoGame = (() => {
   let lastTs = 0;
   let stepAcc = 0;
   let reduceMotion = false;
+  let hintDismissed = false;
   let onWin = null;
   let onDeath = null;
   let webglOk = false;
@@ -66,6 +67,8 @@ export const EcoGame = (() => {
     EcoUI.hideAllOverlays();
     EcoUI.setPlaying(true);
     EcoUI.updateHud(levelIndex + 1, crystalsGot, level.totalCrystals);
+    hintDismissed = false;
+    EcoUI.showOnboardingHint();
     if (EcoInput.consumePing()) doPing();
   }
 
@@ -73,8 +76,15 @@ export const EcoGame = (() => {
   function getState() { return state; }
   function getLevelIndex() { return levelIndex; }
 
+  function noteFirstAction() {
+    if (hintDismissed) return;
+    hintDismissed = true;
+    EcoUI.dismissHint(false);
+  }
+
   function doPing() {
     if (state !== 'play') return;
+    noteFirstAction();
     EcoAudio.ensure();
     EcoAudio.ping();
     pings.push({
@@ -84,7 +94,12 @@ export const EcoGame = (() => {
       life: PING_DURATION,
       maxR: PING_RADIUS,
     });
-    if (!reduceMotion) EcoRender3D.setShake(0.12);
+    /* Light juice — respeita reduced-motion (shake/flash/DOM). */
+    if (!reduceMotion) {
+      EcoRender3D.setShake(0.14);
+      EcoRender3D.setFlash(0.22, 0x40e0d0);
+    }
+    EcoUI.juicePing();
   }
 
   function solidAt(tx, ty) {
@@ -155,6 +170,7 @@ export const EcoGame = (() => {
       if (m.justReleased) microSnapToCenters();
       return;
     }
+    noteFirstAction();
     tryMoveDelta(m.x * SPEED * dt, m.y * SPEED * dt);
     corridorAssist(dt, m.x, m.y);
 
@@ -223,6 +239,11 @@ export const EcoGame = (() => {
         EcoUI.updateHud(levelIndex + 1, crystalsGot, level.totalCrystals);
         EcoRender3D.setCrystalTaken(i);
         EcoRender3D.spawnSparkle(c.x, c.y, '#40e0d0');
+        if (!reduceMotion) {
+          EcoRender3D.setShake(0.08);
+          EcoRender3D.setFlash(0.18, 0x7ff5e8);
+        }
+        EcoUI.juiceCrystal();
       }
     }
     const t = tileAt(player.x, player.y);
@@ -239,7 +260,7 @@ export const EcoGame = (() => {
     if (state !== 'play') return;
     state = 'death';
     EcoAudio.death();
-    EcoRender3D.setFlash(0.55);
+    EcoRender3D.setFlash(0.55, 0xb42832);
     if (!reduceMotion) EcoRender3D.setShake(0.55);
     EcoUI.setPlaying(false);
     EcoUI.show('screen-death');

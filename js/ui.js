@@ -1,12 +1,77 @@
-import { EcoAudio } from './audio.js?v=202610012323';
-/* ECO — telas PT-BR + tip + polish juice / escape cue */
+import { EcoAudio } from './audio.js?v=202610020205';
+/* ECO — telas PT-BR + tip + polish + meta diária + HUD cristais */
 export const EcoUI = (() => {
   const $ = (id) => document.getElementById(id);
+  const META_KEY = 'eco-daily-meta-v1';
 
   let hintActive = false;
   let hintLeaveTimer = null;
   let escapeCueOn = false;
   let floatTimer = null;
+
+  function brtDayKey() {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+    } catch (_) {
+      const d = new Date(Date.now() - 3 * 3600 * 1000);
+      return d.toISOString().slice(0, 10);
+    }
+  }
+
+  function loadDailyMeta() {
+    const day = brtDayKey();
+    try {
+      const raw = localStorage.getItem(META_KEY);
+      if (raw) {
+        const o = JSON.parse(raw);
+        if (o && o.day === day) {
+          return {
+            day,
+            bestCrystals: Math.max(0, o.bestCrystals | 0),
+            escapes: Math.max(0, o.escapes | 0),
+          };
+        }
+      }
+    } catch (_) { /* ok */ }
+    return { day, bestCrystals: 0, escapes: 0 };
+  }
+
+  function saveDailyMeta(meta) {
+    try {
+      localStorage.setItem(META_KEY, JSON.stringify(meta));
+    } catch (_) { /* ok */ }
+  }
+
+  /** Soft daily best — cristais (melhor saída) + contagem de escapes. */
+  function recordEscape(crystals) {
+    const meta = loadDailyMeta();
+    meta.escapes += 1;
+    meta.bestCrystals = Math.max(meta.bestCrystals, crystals | 0);
+    saveDailyMeta(meta);
+    refreshDailyMeta();
+    return meta;
+  }
+
+  function formatDailyMeta(meta) {
+    if (!meta.escapes && !meta.bestCrystals) {
+      return 'Hoje · ainda sem recordes';
+    }
+    return `Hoje · melhor ✦ ${meta.bestCrystals} · saídas ${meta.escapes}`;
+  }
+
+  function refreshDailyMeta() {
+    const meta = loadDailyMeta();
+    const text = formatDailyMeta(meta);
+    const menu = $('daily-meta');
+    const win = $('daily-meta-win');
+    if (menu) menu.textContent = text;
+    if (win) win.textContent = text;
+  }
 
   function show(id) {
     ['screen-menu','screen-tip','screen-pause','screen-death','screen-win'].forEach((s) => {
@@ -34,13 +99,25 @@ export const EcoUI = (() => {
     if (!on) {
       dismissHint(true);
       hideEscapeCue();
+      setDangerNear(false);
     }
   }
 
   function updateHud(phase, crystals, total) {
-    $('hud-phase').textContent = `Fase ${phase}`;
-    $('hud-crystals').textContent = `✦ ${crystals}/${total}`;
-    /* Map-progress: fill cue when enough crystals for a clear escape goal. */
+    const phaseEl = $('hud-phase');
+    if (phaseEl) phaseEl.textContent = `Fase ${phase}`;
+    const label = $('hud-crystals');
+    if (label) label.textContent = `✦ ${crystals}/${total}`;
+    const fill = $('hud-crystal-fill');
+    if (fill) {
+      const pct = total > 0 ? Math.min(100, Math.round((crystals / total) * 100)) : 0;
+      fill.style.width = pct + '%';
+      fill.setAttribute('aria-valuenow', String(pct));
+    }
+    const chip = $('hud-crystal-chip');
+    if (chip) {
+      chip.classList.toggle('is-complete', total > 0 && crystals >= total);
+    }
     if (total > 0 && crystals >= total) showEscapeCue();
     else hideEscapeCue();
   }
@@ -58,7 +135,7 @@ export const EcoUI = (() => {
   function showWin(phase, crystals, total, isLast) {
     $('win-title').textContent = isLast ? 'Caverna conquistada!' : `Fase ${phase} concluída!`;
     $('win-score').textContent = `Cristais: ${crystals}/${total}` + (isLast ? ' · Fim de jogo' : '');
-    $('btn-next').textContent = isLast ? 'Jogar de novo' : 'Próxima fase';
+    recordEscape(crystals);
     hideEscapeCue();
     show('screen-win');
     setPlaying(false);
@@ -82,7 +159,6 @@ export const EcoUI = (() => {
     }
   }
 
-  /** First-minute: como o eco funciona. */
   function hintCopy() {
     return wantsTouchHint()
       ? 'PING revela a caverna · ande pela memória'
@@ -149,6 +225,17 @@ export const EcoUI = (() => {
     }
   }
 
+  function setDangerNear(on) {
+    const edge = $('danger-edge');
+    if (!edge) return;
+    if (on) {
+      edge.classList.add('is-on');
+      edge.classList.toggle('is-static', reduceMotionOn());
+    } else {
+      edge.classList.remove('is-on', 'is-static');
+    }
+  }
+
   function _pulse(el, cls) {
     if (!el || reduceMotionOn()) return;
     el.classList.remove(cls);
@@ -161,21 +248,21 @@ export const EcoUI = (() => {
     el.addEventListener('animationend', done);
   }
 
-  /** Light juice: PING button ripple (DOM). */
   function juicePing() {
     _pulse($('btn-ping'), 'juice-pulse');
   }
 
-  /** Crystal pickup juice — flash/pop gated by reduced-motion. */
   function juiceCrystal() {
     const hud = $('hud-crystals');
+    const chip = $('hud-crystal-chip');
     if (reduceMotionOn()) {
-      /* Static feedback only: brief opacity bump, no motion. */
       if (hud) {
         hud.style.opacity = '1';
         hud.style.color = '#e8fffb';
         setTimeout(() => { hud.style.color = ''; }, 320);
       }
+      if (chip) chip.classList.add('is-flash');
+      setTimeout(() => { if (chip) chip.classList.remove('is-flash'); }, 280);
       const flash = $('pickup-flash');
       if (flash) {
         flash.style.opacity = '0.35';
@@ -184,6 +271,16 @@ export const EcoUI = (() => {
       return;
     }
     _pulse(hud, 'juice-pop-strong');
+    if (chip) {
+      chip.classList.remove('is-pop');
+      void chip.offsetWidth;
+      chip.classList.add('is-pop');
+      const done = () => {
+        chip.classList.remove('is-pop');
+        chip.removeEventListener('animationend', done);
+      };
+      chip.addEventListener('animationend', done);
+    }
     const flash = $('pickup-flash');
     if (flash) {
       flash.classList.remove('is-on');
@@ -209,9 +306,12 @@ export const EcoUI = (() => {
     }
   }
 
+  refreshDailyMeta();
+
   return {
     show, hideAllOverlays, setPlaying, updateHud, updateMuteButtons, showWin,
     tipSeen, markTip, showOnboardingHint, dismissHint, isHintActive,
-    juicePing, juiceCrystal, showEscapeCue, hideEscapeCue, $,
+    juicePing, juiceCrystal, showEscapeCue, hideEscapeCue,
+    refreshDailyMeta, recordEscape, setDangerNear, $,
   };
 })();

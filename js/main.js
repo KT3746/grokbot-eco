@@ -1,9 +1,9 @@
 /* ECO — bootstrap (ES module) */
-import { EcoAudio } from './audio.js?v=202610012323';
-import { EcoLevels } from './levels.js?v=202610012323';
-import { EcoUI } from './ui.js?v=202610012323';
-import { EcoGame } from './game.js?v=202610012323';
-import { EcoInput } from './input.js?v=202610012323';
+import { EcoAudio } from './audio.js?v=202610020205';
+import { EcoLevels } from './levels.js?v=202610020205';
+import { EcoUI } from './ui.js?v=202610020205';
+import { EcoGame } from './game.js?v=202610020205';
+import { EcoInput } from './input.js?v=202610020205';
 
 const canvas = document.getElementById('game');
 
@@ -55,6 +55,7 @@ function goMenu() {
   EcoAudio.ui();
   EcoGame.setState('menu');
   EcoUI.setPlaying(false);
+  EcoUI.refreshDailyMeta();
   EcoUI.show('screen-menu');
 }
 
@@ -87,6 +88,7 @@ function toggleMute() {
 EcoUI.$('btn-mute').addEventListener('click', toggleMute);
 EcoUI.$('btn-mute-menu').addEventListener('click', toggleMute);
 
+EcoUI.refreshDailyMeta();
 EcoUI.show('screen-menu');
 EcoUI.setPlaying(false);
 

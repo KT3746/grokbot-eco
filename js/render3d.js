@@ -38,6 +38,9 @@ export const EcoRender3D = (() => {
   let clock = 0;
   let exitReady = false;
   let echoRings = []; // expanding ping rings {mesh, t, life, maxR}
+  let hazardNear = false;
+  let ambienceBoost = 0;
+  let baseFogDensity = 0.052;
 
   function refreshFx() {
     reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -59,7 +62,8 @@ export const EcoRender3D = (() => {
     try {
       scene = new THREE.Scene();
       scene.background = new THREE.Color(FOG);
-      scene.fog = new THREE.FogExp2(FOG, lowFx ? 0.085 : 0.068);
+      scene.fog = new THREE.FogExp2(FOG, lowFx ? 0.072 : 0.052); // wave2: clearer map fog
+      baseFogDensity = scene.fog.density;
 
       camera = new THREE.PerspectiveCamera(42, 1, 0.15, 80);
 
@@ -466,6 +470,36 @@ export const EcoRender3D = (() => {
     clock += dt;
     if (shake > 0) shake = Math.max(0, shake - dt * 1.8);
     if (flash > 0) flash = Math.max(0, flash - dt * 1.4);
+    if (ambienceBoost > 0) ambienceBoost = Math.max(0, ambienceBoost - dt * 0.55);
+
+    // Fog clarity: ease density when nearby tiles are remembered (readable cave map).
+    if (scene && scene.fog && memory && player) {
+      let localMem = 0;
+      let samples = 0;
+      const cx = Math.floor(player.x), cy = Math.floor(player.y);
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const tx = cx + dx, ty = cy + dy;
+          if (ty < 0 || tx < 0 || ty >= memory.length || !memory[ty] || tx >= memory[ty].length) continue;
+          localMem += memory[ty][tx];
+          samples++;
+        }
+      }
+      const avg = samples ? localMem / samples : 0;
+      const clear = avg * 0.028; // soft clarity bonus
+      const hazardFog = hazardNear ? 0.006 : 0;
+      scene.fog.density = Math.max(0.04, baseFogDensity - clear + hazardFog);
+    }
+    if (ambient) {
+      const pulse = reduceMotion ? 0 : Math.sin(clock * 0.7) * 0.015;
+      ambient.intensity = 0.12 + ambienceBoost * 0.08 + pulse + (hazardNear ? 0.02 : 0);
+      if (hazardNear && !reduceMotion) {
+        ambient.color.setRGB(0.12, 0.04, 0.05);
+      } else {
+        ambient.color.setRGB(0.04, 0.07, 0.09);
+      }
+    }
+
 
     // Ping light — expanding pulse
     if (pingLight) {
@@ -647,11 +681,20 @@ export const EcoRender3D = (() => {
     if (play) play.disabled = true;
   }
 
+  function setHazardNear(on) {
+    hazardNear = !!on;
+  }
+
+  function nudgeAmbience() {
+    if (reduceMotion) return;
+    ambienceBoost = Math.min(1, ambienceBoost + 0.85);
+  }
+
   return {
     init, isOk, resize, buildLevel, disposeLevel,
     syncPlayer, followCam, updateVisuals,
     setCrystalTaken, spawnSparkle, setShake, setFlash,
-    setExitReady, spawnEchoRing,
+    setExitReady, spawnEchoRing, setHazardNear, nudgeAmbience,
     render, showWebglError,
     get cam() { return cam; },
   };

@@ -1,10 +1,12 @@
-import { EcoAudio } from './audio.js?v=202609290141';
-/* ECO — telas PT-BR + first-minute tip */
+import { EcoAudio } from './audio.js?v=202610012323';
+/* ECO — telas PT-BR + tip + polish juice / escape cue */
 export const EcoUI = (() => {
   const $ = (id) => document.getElementById(id);
 
   let hintActive = false;
   let hintLeaveTimer = null;
+  let escapeCueOn = false;
+  let floatTimer = null;
 
   function show(id) {
     ['screen-menu','screen-tip','screen-pause','screen-death','screen-win'].forEach((s) => {
@@ -29,12 +31,18 @@ export const EcoUI = (() => {
       touch.classList.toggle('hidden', !on);
       touch.setAttribute('aria-hidden', on ? 'false' : 'true');
     }
-    if (!on) dismissHint(true);
+    if (!on) {
+      dismissHint(true);
+      hideEscapeCue();
+    }
   }
 
   function updateHud(phase, crystals, total) {
     $('hud-phase').textContent = `Fase ${phase}`;
     $('hud-crystals').textContent = `✦ ${crystals}/${total}`;
+    /* Map-progress: fill cue when enough crystals for a clear escape goal. */
+    if (total > 0 && crystals >= total) showEscapeCue();
+    else hideEscapeCue();
   }
 
   function updateMuteButtons() {
@@ -51,6 +59,7 @@ export const EcoUI = (() => {
     $('win-title').textContent = isLast ? 'Caverna conquistada!' : `Fase ${phase} concluída!`;
     $('win-score').textContent = `Cristais: ${crystals}/${total}` + (isLast ? ' · Fim de jogo' : '');
     $('btn-next').textContent = isLast ? 'Jogar de novo' : 'Próxima fase';
+    hideEscapeCue();
     show('screen-win');
     setPlaying(false);
   }
@@ -119,6 +128,19 @@ export const EcoUI = (() => {
 
   function isHintActive() { return hintActive; }
 
+  function showEscapeCue() {
+    const el = $('escape-cue');
+    if (!el) return;
+    el.classList.remove('hidden');
+    escapeCueOn = true;
+  }
+
+  function hideEscapeCue() {
+    const el = $('escape-cue');
+    if (el) el.classList.add('hidden');
+    escapeCueOn = false;
+  }
+
   function reduceMotionOn() {
     try {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -144,14 +166,52 @@ export const EcoUI = (() => {
     _pulse($('btn-ping'), 'juice-pulse');
   }
 
-  /** Light juice: crystal HUD pop. */
+  /** Crystal pickup juice — flash/pop gated by reduced-motion. */
   function juiceCrystal() {
-    _pulse($('hud-crystals'), 'juice-pop');
+    const hud = $('hud-crystals');
+    if (reduceMotionOn()) {
+      /* Static feedback only: brief opacity bump, no motion. */
+      if (hud) {
+        hud.style.opacity = '1';
+        hud.style.color = '#e8fffb';
+        setTimeout(() => { hud.style.color = ''; }, 320);
+      }
+      const flash = $('pickup-flash');
+      if (flash) {
+        flash.style.opacity = '0.35';
+        setTimeout(() => { flash.style.opacity = '0'; }, 200);
+      }
+      return;
+    }
+    _pulse(hud, 'juice-pop-strong');
+    const flash = $('pickup-flash');
+    if (flash) {
+      flash.classList.remove('is-on');
+      void flash.offsetWidth;
+      flash.classList.add('is-on');
+      const done = () => {
+        flash.classList.remove('is-on');
+        flash.removeEventListener('animationend', done);
+      };
+      flash.addEventListener('animationend', done);
+    }
+    const flo = $('pickup-float');
+    if (flo) {
+      if (floatTimer) clearTimeout(floatTimer);
+      flo.classList.remove('hidden', 'is-pop');
+      void flo.offsetWidth;
+      flo.classList.add('is-pop');
+      floatTimer = setTimeout(() => {
+        flo.classList.add('hidden');
+        flo.classList.remove('is-pop');
+        floatTimer = null;
+      }, 720);
+    }
   }
 
   return {
     show, hideAllOverlays, setPlaying, updateHud, updateMuteButtons, showWin,
     tipSeen, markTip, showOnboardingHint, dismissHint, isHintActive,
-    juicePing, juiceCrystal, $,
+    juicePing, juiceCrystal, showEscapeCue, hideEscapeCue, $,
   };
 })();

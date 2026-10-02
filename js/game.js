@@ -1,9 +1,9 @@
 /* ECO — motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202609290141';
-import { EcoInput } from './input.js?v=202609290141';
-import { EcoAudio } from './audio.js?v=202609290141';
-import { EcoUI } from './ui.js?v=202609290141';
-import { EcoRender3D } from './render3d.js?v=202609290141';
+import { EcoLevels } from './levels.js?v=202610012323';
+import { EcoInput } from './input.js?v=202610012323';
+import { EcoAudio } from './audio.js?v=202610012323';
+import { EcoUI } from './ui.js?v=202610012323';
+import { EcoRender3D } from './render3d.js?v=202610012323';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
@@ -61,6 +61,7 @@ export const EcoGame = (() => {
       for (let x = 0; x < level.w; x++) memory[y][x] = 0;
     }
     EcoRender3D.buildLevel(level);
+    EcoRender3D.setExitReady(false);
     EcoRender3D.syncPlayer(player.x, player.y);
     state = 'play';
     if (EcoInput.markLevelStart) EcoInput.markLevelStart();
@@ -98,6 +99,7 @@ export const EcoGame = (() => {
     if (!reduceMotion) {
       EcoRender3D.setShake(0.14);
       EcoRender3D.setFlash(0.22, 0x40e0d0);
+      EcoRender3D.spawnEchoRing(player.x, player.y);
     }
     EcoUI.juicePing();
   }
@@ -239,11 +241,18 @@ export const EcoGame = (() => {
         EcoUI.updateHud(levelIndex + 1, crystalsGot, level.totalCrystals);
         EcoRender3D.setCrystalTaken(i);
         EcoRender3D.spawnSparkle(c.x, c.y, '#40e0d0');
+        /* Crystal pickup juice — flash/pop; reduced-motion skips shake/anim. */
         if (!reduceMotion) {
-          EcoRender3D.setShake(0.08);
-          EcoRender3D.setFlash(0.18, 0x7ff5e8);
+          EcoRender3D.setShake(0.12);
+          EcoRender3D.setFlash(0.32, 0x7ff5e8);
+          EcoRender3D.spawnSparkle(c.x, c.y, '#c8fff5');
+        } else {
+          EcoRender3D.setFlash(0.12, 0x7ff5e8);
         }
         EcoUI.juiceCrystal();
+        if (crystalsGot >= level.totalCrystals) {
+          EcoRender3D.setExitReady(true);
+        }
       }
     }
     const t = tileAt(player.x, player.y);

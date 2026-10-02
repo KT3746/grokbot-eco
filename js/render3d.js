@@ -36,6 +36,8 @@ export const EcoRender3D = (() => {
   let _matColor = new THREE.Color();
   let levelW = 0, levelH = 0;
   let clock = 0;
+  let exitReady = false;
+  let echoRings = []; // expanding ping rings {mesh, t, life, maxR}
 
   function refreshFx() {
     reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -169,6 +171,13 @@ export const EcoRender3D = (() => {
     crystalMeshes = [];
     exitGroup = null;
     exitLight = null;
+    exitReady = false;
+    for (const er of echoRings) {
+      scene.remove(er.mesh);
+      er.mesh.geometry.dispose();
+      er.mesh.material.dispose();
+    }
+    echoRings = [];
     for (const s of sparkles) {
       scene.remove(s.mesh);
       if (s.mesh.geometry) s.mesh.geometry.dispose();
@@ -344,6 +353,27 @@ export const EcoRender3D = (() => {
 
     cam.x = level.start.x;
     cam.y = level.start.y;
+  }
+
+  function setExitReady(on) {
+    exitReady = !!on;
+  }
+
+  /** Echo pulse visual polish — expanding teal ring gated by caller (reduced-motion). */
+  function spawnEchoRing(x, y) {
+    if (reduceMotion || !scene) return;
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x70fff0,
+      transparent: true,
+      opacity: 0.75,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.22, lowFx ? 24 : 40), mat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(x, 0.08, y);
+    scene.add(mesh);
+    echoRings.push({ mesh, t: 0, life: lowFx ? 0.55 : 0.75, maxR: lowFx ? 5.5 : 7.2 });
   }
 
   function setCrystalTaken(index) {
@@ -528,17 +558,45 @@ export const EcoRender3D = (() => {
       const tx = Math.floor(level.exit.x), ty = Math.floor(level.exit.y);
       const v = visibilityAt(tx, ty, memory, pings, player);
       // Exit always a bit warmer (readable goal) but still gated by reveal
-      const show = Math.max(v, 0.12);
+      // When all crystals collected, boost beacon as escape cue.
+      const readyBoost = exitReady ? 0.28 : 0;
+      const show = Math.max(v, 0.12) + readyBoost;
       exitGroup.visible = true;
       exitGroup.traverse((o) => {
         if (o.material && o.material.emissiveIntensity !== undefined) {
-          o.material.emissiveIntensity = 0.25 + show * 0.9;
-          if (o.material.opacity !== undefined) o.material.opacity = 0.35 + show * 0.65;
+          o.material.emissiveIntensity = 0.25 + show * 0.9 + (exitReady ? 0.35 : 0);
+          if (o.material.opacity !== undefined) o.material.opacity = Math.min(1, 0.35 + show * 0.65);
         }
       });
-      if (exitLight) exitLight.intensity = 0.35 + show * 1.0;
+      if (exitLight) {
+        const pulse = exitReady && !reduceMotion ? (0.15 + Math.sin(clock * 5) * 0.15) : 0;
+        exitLight.intensity = 0.35 + show * 1.0 + (exitReady ? 0.55 : 0) + pulse;
+        if (exitReady) exitLight.distance = 5.8;
+      }
       if (exitGroup.userData.ring && !reduceMotion) {
-        exitGroup.userData.ring.rotation.z += dt * 1.5;
+        exitGroup.userData.ring.rotation.z += dt * (exitReady ? 2.8 : 1.5);
+        if (exitReady) {
+          const s = 1 + Math.sin(clock * 4) * 0.08;
+          exitGroup.userData.ring.scale.set(s, s, s);
+        }
+      }
+    }
+
+    // Echo rings expand + fade
+    for (let i = echoRings.length - 1; i >= 0; i--) {
+      const er = echoRings[i];
+      er.t += dt;
+      const u = Math.min(1, er.t / er.life);
+      const radius = 0.15 + er.maxR * (1 - Math.pow(1 - u, 2));
+      const inner = Math.max(0.05, radius * 0.82);
+      er.mesh.geometry.dispose();
+      er.mesh.geometry = new THREE.RingGeometry(inner, radius, lowFx ? 24 : 40);
+      er.mesh.material.opacity = Math.max(0, 0.7 * (1 - u));
+      if (er.t >= er.life) {
+        scene.remove(er.mesh);
+        er.mesh.geometry.dispose();
+        er.mesh.material.dispose();
+        echoRings.splice(i, 1);
       }
     }
 
@@ -593,6 +651,7 @@ export const EcoRender3D = (() => {
     init, isOk, resize, buildLevel, disposeLevel,
     syncPlayer, followCam, updateVisuals,
     setCrystalTaken, spawnSparkle, setShake, setFlash,
+    setExitReady, spawnEchoRing,
     render, showWebglError,
     get cam() { return cam; },
   };

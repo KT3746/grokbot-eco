@@ -1,9 +1,9 @@
 /* ECO — motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202610012323';
-import { EcoInput } from './input.js?v=202610012323';
-import { EcoAudio } from './audio.js?v=202610012323';
-import { EcoUI } from './ui.js?v=202610012323';
-import { EcoRender3D } from './render3d.js?v=202610012323';
+import { EcoLevels } from './levels.js?v=202610020205';
+import { EcoInput } from './input.js?v=202610020205';
+import { EcoAudio } from './audio.js?v=202610020205';
+import { EcoUI } from './ui.js?v=202610020205';
+import { EcoRender3D } from './render3d.js?v=202610020205';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
@@ -26,6 +26,8 @@ export const EcoGame = (() => {
   let onWin = null;
   let onDeath = null;
   let webglOk = false;
+  let nearHazard = false;
+  let ambienceAcc = 0;
 
   function refreshFxFlags() {
     reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -54,8 +56,11 @@ export const EcoGame = (() => {
     player.x = level.start.x;
     player.y = level.start.y;
     crystalsGot = 0;
+    nearHazard = false;
+    ambienceAcc = 0;
     pings = [];
     memory = [];
+    EcoUI.setDangerNear(false);
     for (let y = 0; y < level.h; y++) {
       memory[y] = [];
       for (let x = 0; x < level.w; x++) memory[y][x] = 0;
@@ -230,6 +235,50 @@ export const EcoGame = (() => {
 
   function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
+  function nearestPitDist() {
+    if (!level || !level.pits || !level.pits.length) {
+      /* Derive from tiles if pits list absent. */
+      let best = 99;
+      for (let y = 0; y < level.h; y++) {
+        for (let x = 0; x < level.w; x++) {
+          if (level.tiles[y][x] !== 'pit') continue;
+          const d = Math.hypot(x + 0.5 - player.x, y + 0.5 - player.y);
+          if (d < best) best = d;
+        }
+      }
+      return best;
+    }
+    let best = 99;
+    for (const p of level.pits) {
+      const d = Math.hypot(p.x - player.x, p.y - player.y);
+      if (d < best) best = d;
+    }
+    return best;
+  }
+
+  function updateHazardAmbience(dt) {
+    const dist = nearestPitDist();
+    const wasNear = nearHazard;
+    nearHazard = dist < 1.45;
+    if (nearHazard !== wasNear) {
+      EcoUI.setDangerNear(nearHazard);
+      if (typeof EcoRender3D.setHazardNear === 'function') {
+        EcoRender3D.setHazardNear(nearHazard);
+      }
+    }
+    if (nearHazard) {
+      EcoAudio.dangerSting(performance.now());
+    }
+    ambienceAcc += dt;
+    if (ambienceAcc > 4.0) {
+      ambienceAcc = 0;
+      EcoAudio.ambiencePulse(performance.now());
+      if (typeof EcoRender3D.nudgeAmbience === 'function' && !reduceMotion) {
+        EcoRender3D.nudgeAmbience();
+      }
+    }
+  }
+
   function checkPickups() {
     for (let i = 0; i < level.crystals.length; i++) {
       const c = level.crystals[i];
@@ -299,6 +348,7 @@ export const EcoGame = (() => {
         if (EcoInput.consumePing()) doPing();
         movePlayer(dt);
         updateReveal(dt);
+        updateHazardAmbience(dt);
         checkPickups();
       }
     } else {

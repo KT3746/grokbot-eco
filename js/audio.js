@@ -3,6 +3,8 @@ export const EcoAudio = (() => {
   let ctx = null;
   let muted = false;
   let master = null;
+  let lastSting = 0;
+  let lastAmbience = 0;
 
   function ensure() {
     if (!ctx) {
@@ -98,6 +100,27 @@ export const EcoAudio = (() => {
     tone(400, 0.06, 'square', 0.06);
   }
 
+  /** Soft cave ambience pulse — low, rare; skip if muted/throttled. */
+  function ambiencePulse(nowMs) {
+    if (muted) return;
+    const t = nowMs || performance.now();
+    if (t - lastAmbience < 4200) return;
+    lastAmbience = t;
+    tone(72, 0.9, 'sine', 0.035, 48);
+    setTimeout(() => tone(96, 0.7, 'triangle', 0.02, 55), 180);
+  }
+
+  /** Danger sting near hazard — soft, throttled, reduced-motion callers skip visuals only. */
+  function dangerSting(nowMs) {
+    if (muted) return;
+    const t = nowMs || performance.now();
+    if (t - lastSting < 1100) return false;
+    lastSting = t;
+    tone(110, 0.28, 'sawtooth', 0.07, 55);
+    setTimeout(() => tone(90, 0.22, 'sine', 0.045, 40), 60);
+    return true;
+  }
+
   function suspend() {
     if (ctx && ctx.state === 'running') {
       try { ctx.suspend(); } catch (_) { /* ok */ }
@@ -112,5 +135,8 @@ export const EcoAudio = (() => {
 
   loadMute();
 
-  return { ensure, setMuted, isMuted, ping, collect, death, win, footstep, ui, suspend, resume };
+  return {
+    ensure, setMuted, isMuted, ping, collect, death, win, footstep, ui,
+    ambiencePulse, dangerSting, suspend, resume,
+  };
 })();

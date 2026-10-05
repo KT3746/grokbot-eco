@@ -1,9 +1,9 @@
 /* ECO — motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202610020205';
-import { EcoInput } from './input.js?v=202610020205';
-import { EcoAudio } from './audio.js?v=202610020205';
-import { EcoUI } from './ui.js?v=202610020205';
-import { EcoRender3D } from './render3d.js?v=202610020205';
+import { EcoLevels } from './levels.js?v=202610052100';
+import { EcoInput } from './input.js?v=202610052100';
+import { EcoAudio } from './audio.js?v=202610052100';
+import { EcoUI } from './ui.js?v=202610052100';
+import { EcoRender3D } from './render3d.js?v=202610052100';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
@@ -28,6 +28,46 @@ export const EcoGame = (() => {
   let webglOk = false;
   let nearHazard = false;
   let ambienceAcc = 0;
+  /* wave3: tempo/PINGs da fase + bússola pós-PING */
+  let levelTime = 0;
+  let pingCount = 0;
+  let compassT = 0;
+  let hudTimeAcc = 0;
+  const COMPASS_SHOW = 2.6;
+
+  function buzz(pattern) {
+    try {
+      if (reduceMotion) return;
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    } catch (_) {}
+  }
+
+  function compassTarget() {
+    if (!level) return null;
+    if (crystalsGot >= level.totalCrystals) return { x: level.exit.x, y: level.exit.y, kind: 'exit' };
+    let best = null, bd = Infinity;
+    for (const c of level.crystals) {
+      if (c.taken) continue;
+      const d = Math.hypot(c.x - player.x, c.y - player.y);
+      if (d < bd) { bd = d; best = c; }
+    }
+    return best ? { x: best.x, y: best.y, kind: 'crystal' } : null;
+  }
+
+  function updateCompass(dt) {
+    if (compassT > 0) compassT = Math.max(0, compassT - dt);
+    const exitMode = level && crystalsGot >= level.totalCrystals;
+    const tgt = compassTarget();
+    if (!tgt || (compassT <= 0 && !exitMode)) { EcoUI.updateCompass(null); return; }
+    const d = Math.hypot(tgt.x - player.x, tgt.y - player.y);
+    if (d < 1.1) { EcoUI.updateCompass(null); return; }
+    const ps = EcoRender3D.projectToScreen(player.x, player.y);
+    const ts = EcoRender3D.projectToScreen(tgt.x, tgt.y);
+    if (!ps || !ts) { EcoUI.updateCompass(null); return; }
+    const ang = Math.atan2(ts.y - ps.y, ts.x - ps.x);
+    const fade = exitMode ? 1 : Math.min(1, compassT / 0.5);
+    EcoUI.updateCompass({ x: ps.x, y: ps.y, ang, kind: tgt.kind, dist: Math.round(d), alpha: fade });
+  }
 
   function refreshFxFlags() {
     reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -58,6 +98,12 @@ export const EcoGame = (() => {
     crystalsGot = 0;
     nearHazard = false;
     ambienceAcc = 0;
+    levelTime = 0;
+    pingCount = 0;
+    compassT = 0;
+    hudTimeAcc = 0;
+    EcoUI.updateTime(0);
+    EcoUI.updateCompass(null);
     pings = [];
     memory = [];
     EcoUI.setDangerNear(false);
@@ -75,6 +121,7 @@ export const EcoGame = (() => {
     EcoUI.updateHud(levelIndex + 1, crystalsGot, level.totalCrystals);
     hintDismissed = false;
     EcoUI.showOnboardingHint();
+    EcoUI.showLevelIntro(levelIndex + 1, level.name, level.totalCrystals);
     if (EcoInput.consumePing()) doPing();
   }
 
@@ -93,6 +140,9 @@ export const EcoGame = (() => {
     noteFirstAction();
     EcoAudio.ensure();
     EcoAudio.ping();
+    pingCount++;
+    compassT = COMPASS_SHOW;
+    buzz(8);
     pings.push({
       x: player.x,
       y: player.y,
@@ -299,8 +349,10 @@ export const EcoGame = (() => {
           EcoRender3D.setFlash(0.12, 0x7ff5e8);
         }
         EcoUI.juiceCrystal();
+        buzz(18);
         if (crystalsGot >= level.totalCrystals) {
           EcoRender3D.setExitReady(true);
+          buzz([20, 50, 30]);
         }
       }
     }
@@ -321,6 +373,9 @@ export const EcoGame = (() => {
     EcoRender3D.setFlash(0.55, 0xb42832);
     if (!reduceMotion) EcoRender3D.setShake(0.55);
     EcoUI.setPlaying(false);
+    EcoUI.updateCompass(null);
+    buzz([60, 40, 90]);
+    EcoUI.showDeathStats(crystalsGot, level.totalCrystals, levelTime);
     EcoUI.show('screen-death');
     if (onDeath) onDeath();
   }
@@ -332,7 +387,11 @@ export const EcoGame = (() => {
     EcoRender3D.spawnSparkle(level.exit.x, level.exit.y, '#f0a060');
     EcoRender3D.spawnSparkle(player.x, player.y, '#40e0d0');
     const isLast = levelIndex >= EcoLevels.count - 1;
-    EcoUI.showWin(levelIndex + 1, crystalsGot, level.totalCrystals, isLast);
+    EcoUI.updateCompass(null);
+    buzz([25, 40, 25, 40, 60]);
+    EcoUI.showWin(levelIndex + 1, crystalsGot, level.totalCrystals, isLast, {
+      time: levelTime, pings: pingCount, levelIndex,
+    });
     if (onWin) onWin(levelIndex, crystalsGot, level.totalCrystals, isLast);
   }
 
@@ -346,6 +405,9 @@ export const EcoGame = (() => {
         EcoUI.setPlaying(true);
       } else {
         if (EcoInput.consumePing()) doPing();
+        levelTime += dt;
+        hudTimeAcc += dt;
+        if (hudTimeAcc >= 0.25) { hudTimeAcc = 0; EcoUI.updateTime(levelTime); }
         movePlayer(dt);
         updateReveal(dt);
         updateHazardAmbience(dt);
@@ -361,6 +423,7 @@ export const EcoGame = (() => {
     if (level) {
       EcoRender3D.updateVisuals(dt, memory, pings, player, level);
     }
+    if (state === 'play' && level) updateCompass(dt);
   }
 
   function frame(ts) {

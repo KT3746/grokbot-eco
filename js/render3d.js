@@ -681,6 +681,19 @@ export const EcoRender3D = (() => {
     if (play) play.disabled = true;
   }
 
+  const _proj = new THREE.Vector3();
+  /** Tile (x,y) -> CSS px na tela (wave3 bússola). */
+  function projectToScreen(x, y) {
+    if (!camera) return null;
+    camera.updateMatrixWorld();
+    _proj.set(x, 0.4, y).project(camera);
+    return {
+      x: (_proj.x * 0.5 + 0.5) * window.innerWidth,
+      y: (-_proj.y * 0.5 + 0.5) * window.innerHeight,
+      behind: _proj.z > 1,
+    };
+  }
+
   function setHazardNear(on) {
     hazardNear = !!on;
   }
@@ -695,7 +708,7 @@ export const EcoRender3D = (() => {
     syncPlayer, followCam, updateVisuals,
     setCrystalTaken, spawnSparkle, setShake, setFlash,
     setExitReady, spawnEchoRing, setHazardNear, nudgeAmbience,
-    render, showWebglError,
+    render, showWebglError, projectToScreen,
     get cam() { return cam; },
   };
 })();

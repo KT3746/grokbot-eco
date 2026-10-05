@@ -1,4 +1,4 @@
-import { EcoAudio } from './audio.js?v=202610020205';
+import { EcoAudio } from './audio.js?v=202610052100';
 /* ECO — telas PT-BR + tip + polish + meta diária + HUD cristais */
 export const EcoUI = (() => {
   const $ = (id) => document.getElementById(id);
@@ -100,6 +100,8 @@ export const EcoUI = (() => {
       dismissHint(true);
       hideEscapeCue();
       setDangerNear(false);
+      updateCompass(null);
+      hideLevelIntro();
     }
   }
 
@@ -132,9 +134,126 @@ export const EcoUI = (() => {
     if (bmm) bmm.textContent = label;
   }
 
-  function showWin(phase, crystals, total, isLast) {
+  /* ---- wave3: tempo, intro da fase, bússola, estrelas ---- */
+  const BEST_KEY = 'eco-best-v1';
+  let introTimer = null;
+
+  function fmtTime(t) {
+    const s = Math.max(0, Math.floor(t || 0));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  function updateTime(t) {
+    const el = $('hud-time');
+    if (el) el.textContent = fmtTime(t);
+  }
+
+  function hideLevelIntro() {
+    const el = $('level-intro');
+    if (introTimer) { clearTimeout(introTimer); introTimer = null; }
+    if (el) el.classList.add('hidden');
+  }
+
+  function showLevelIntro(phase, name, total) {
+    const el = $('level-intro');
+    if (!el) return;
+    $('intro-phase').textContent = `Fase ${phase}`;
+    $('intro-name').textContent = name || '';
+    $('intro-goal').textContent = total === 1
+      ? 'Colete 1 ✦ e ache a saída'
+      : `Colete ${total} ✦ e ache a saída`;
+    el.classList.remove('hidden', 'is-on');
+    void el.offsetWidth;
+    el.classList.add('is-on');
+    if (introTimer) clearTimeout(introTimer);
+    introTimer = setTimeout(() => {
+      el.classList.add('hidden');
+      el.classList.remove('is-on');
+      introTimer = null;
+    }, 2300);
+  }
+
+  function updateCompass(c) {
+    const el = $('eco-compass');
+    if (!el) return;
+    if (!c) {
+      if (!el.classList.contains('hidden')) el.classList.add('hidden');
+      return;
+    }
+    el.classList.remove('hidden');
+    const R = Math.min(96, Math.max(64, Math.min(window.innerWidth, window.innerHeight) * 0.16));
+    const x = c.x + Math.cos(c.ang) * R;
+    const y = c.y + Math.sin(c.ang) * R;
+    el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
+    el.style.opacity = String(c.alpha == null ? 1 : c.alpha);
+    const arrow = el.firstElementChild;
+    if (arrow) arrow.style.transform = `rotate(${c.ang.toFixed(3)}rad)`;
+    el.classList.toggle('is-exit', c.kind === 'exit');
+    const label = $('compass-label');
+    if (label) label.textContent = c.kind === 'exit' ? `saída ${c.dist}m` : `✦ ${c.dist}m`;
+  }
+
+  function showDeathStats(crystals, total, time) {
+    const el = $('death-stats');
+    if (el) el.textContent = `✦ ${crystals}/${total} · ⏱ ${fmtTime(time)}`;
+  }
+
+  function loadBest() {
+    try { return JSON.parse(localStorage.getItem(BEST_KEY) || '{}') || {}; } catch (_) { return {}; }
+  }
+
+  function starsFor(crystals, total, time, pings) {
+    let s = 1;
+    if (total > 0 && crystals >= total) s++;
+    /* 3ª estrela: até ~6 PINGs por cristal+1 OU fase rápida */
+    if (s === 2 && (pings <= total * 3 + 3 || time <= 45 + total * 10)) s++;
+    return s;
+  }
+
+  function showWinStats(crystals, total, stats) {
+    const stars = starsFor(crystals, total, stats.time, stats.pings);
+    const wrap = $('win-stars');
+    if (wrap) {
+      wrap.setAttribute('aria-label', `${stars} de 3 estrelas`);
+      [...wrap.children].forEach((st, i) => {
+        st.classList.remove('is-on');
+        st.style.animationDelay = (0.12 + i * 0.18) + 's';
+        if (i < stars) {
+          void st.offsetWidth;
+          st.classList.add('is-on');
+        }
+      });
+    }
+    const line = $('win-stats');
+    if (line) line.textContent = `⏱ ${fmtTime(stats.time)} · PING ${stats.pings}`;
+    const best = loadBest();
+    const k = 'L' + stats.levelIndex;
+    const prev = best[k];
+    const isRecord = !prev || stars > prev.stars || (stars === prev.stars && stats.time < prev.time);
+    if (isRecord) {
+      best[k] = { stars, time: Math.round(stats.time * 10) / 10 };
+      try { localStorage.setItem(BEST_KEY, JSON.stringify(best)); } catch (_) {}
+    }
+    const rec = $('win-record');
+    if (rec) {
+      rec.classList.remove('is-muted');
+      if (!prev) {
+        rec.classList.add('hidden');
+      } else if (isRecord) {
+        rec.textContent = 'Novo recorde da fase!';
+        rec.classList.remove('hidden');
+      } else {
+        rec.textContent = `Recorde: ${'★'.repeat(prev.stars)} · ${fmtTime(prev.time)}`;
+        rec.classList.add('is-muted');
+        rec.classList.remove('hidden');
+      }
+    }
+  }
+
+  function showWin(phase, crystals, total, isLast, stats) {
     $('win-title').textContent = isLast ? 'Caverna conquistada!' : `Fase ${phase} concluída!`;
     $('win-score').textContent = `Cristais: ${crystals}/${total}` + (isLast ? ' · Fim de jogo' : '');
+    if (stats) showWinStats(crystals, total, stats);
     recordEscape(crystals);
     hideEscapeCue();
     show('screen-win');
@@ -313,5 +432,6 @@ export const EcoUI = (() => {
     tipSeen, markTip, showOnboardingHint, dismissHint, isHintActive,
     juicePing, juiceCrystal, showEscapeCue, hideEscapeCue,
     refreshDailyMeta, recordEscape, setDangerNear, $,
+    updateTime, showLevelIntro, hideLevelIntro, updateCompass, showDeathStats,
   };
 })();

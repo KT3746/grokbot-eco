@@ -8,12 +8,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>ECO</title>
-  <link rel="stylesheet" href="css/style.css?v=202610020205" />
+  <link rel="stylesheet" href="css/style.css?v=202610052100" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23030508'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%2340e0d0' stroke-width='3' opacity='0.9'/%3E%3Ccircle cx='32' cy='32' r='8' fill='none' stroke='%2340e0d0' stroke-width='2' opacity='0.5'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23c8fff5'/%3E%3C/svg%3E" />
   <script type="importmap">
   {
     "imports": {
-      "three": "./js/vendor/three.module.js?v=202610020205"
+      "three": "./js/vendor/three.module.js?v=202610052100"
     }
   }
   </script>
@@ -29,6 +29,7 @@
           <span id="hud-crystals">✦ 0/0</span>
           <span class="crystal-bar" aria-hidden="true"><span id="hud-crystal-fill" class="crystal-fill" style="width:0%"></span></span>
         </div>
+        <span id="hud-time" class="time-chip" aria-label="Tempo">0:00</span>
       </div>
       <div class="hud-right">
         <button type="button" id="btn-mute" class="icon-btn" aria-label="Mudo">🔊</button>
@@ -41,6 +42,15 @@
     <div id="pickup-flash" class="pickup-flash" aria-hidden="true"></div>
     <div id="pickup-float" class="pickup-float hidden" aria-hidden="true">+1 ✦</div>
     <div id="danger-edge" class="danger-edge" aria-hidden="true"></div>
+    <div id="level-intro" class="level-intro hidden" aria-live="polite">
+      <span id="intro-phase" class="intro-phase">Fase 1</span>
+      <strong id="intro-name" class="intro-name">Eco inicial</strong>
+      <span id="intro-goal" class="intro-goal">Colete 2 ✦ e ache a saída</span>
+    </div>
+    <div id="eco-compass" class="eco-compass hidden" aria-hidden="true">
+      <span class="compass-arrow">➤</span>
+      <span id="compass-label" class="compass-label">✦</span>
+    </div>
 
     <!-- Controles touch: cantos inferiores, semi-transparentes -->
     <div id="touch" class="touch hidden" aria-hidden="true">
@@ -99,6 +109,8 @@
       <div class="panel">
         <h2>Queda…</h2>
         <p class="tagline">O escuro engoliu você.</p>
+        <p id="death-stats" class="stats-line">✦ 0/0 · 0:00</p>
+        <p class="death-tip">Dica: no PING os buracos brilham em <span class="c-danger">vermelho</span>.</p>
         <button type="button" id="btn-retry" class="btn primary">Reiniciar</button>
         <button type="button" id="btn-death-menu" class="btn ghost">Menu</button>
       </div>
@@ -108,7 +120,10 @@
     <section id="screen-win" class="overlay screen hidden" aria-label="Vitória">
       <div class="panel">
         <h2 id="win-title">Fase concluída!</h2>
+        <div id="win-stars" class="win-stars" aria-label="Estrelas"><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
         <p id="win-score" class="tagline">Cristais: 0/0</p>
+        <p id="win-stats" class="stats-line">⏱ 0:00 · PING 0</p>
+        <p id="win-record" class="win-record hidden">Novo recorde da fase!</p>
         <p id="daily-meta-win" class="daily-meta">Hoje · ainda sem recordes</p>
         <button type="button" id="btn-next" class="btn primary">Próxima fase</button>
         <button type="button" id="btn-win-menu" class="btn ghost">Menu</button>
@@ -116,6 +131,6 @@
     </section>
   </div>
 
-  <script type="module" src="js/main.js?v=202610020205"></script>
+  <script type="module" src="js/main.js?v=202610052100"></script>
 </body>
 </html>

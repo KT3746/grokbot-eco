@@ -704,3 +704,120 @@ html, body {
   .level-intro.is-on { animation: none; opacity: 1; }
   .win-stars .star.is-on, .win-record, .eco-compass.is-exit .compass-arrow { animation: none; }
 }
+
+/* ===== wave4: cooldown PING, rastro, bump, sussurro cristal ===== */
+.ping-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.ping-label {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  letter-spacing: 0.1em;
+}
+.ping-ring {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  transform: rotate(-90deg);
+  pointer-events: none;
+  z-index: 0;
+}
+.ping-ring-bg {
+  fill: none;
+  stroke: rgba(64, 224, 208, 0.18);
+  stroke-width: 4.5;
+}
+.ping-ring-fill {
+  fill: none;
+  stroke: #7ff5e8;
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-dasharray: 276.46;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 4px rgba(64, 224, 208, 0.65));
+  transition: stroke 0.15s ease;
+}
+.ping-btn.is-cooling {
+  border-color: rgba(64, 224, 208, 0.35);
+  color: #9ab8b4;
+  box-shadow: 0 0 12px rgba(64, 224, 208, 0.1), inset 0 0 10px rgba(0, 0, 0, 0.25);
+}
+.ping-btn.is-cooling .ping-ring-fill {
+  stroke: #2aa89a;
+  filter: none;
+}
+.ping-btn.is-ready:not(.is-cooling) .ping-ring-fill {
+  stroke: #c8fff5;
+  filter: drop-shadow(0 0 6px rgba(127, 245, 232, 0.85));
+}
+
+.bump-edge {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, rgba(64, 224, 208, 0.28), transparent 18%, transparent 82%, rgba(64, 224, 208, 0.28)),
+    linear-gradient(180deg, rgba(64, 224, 208, 0.18), transparent 14%, transparent 86%, rgba(64, 224, 208, 0.18));
+}
+.bump-edge.is-on {
+  animation: eco-bump-flash 0.28s ease-out;
+}
+@keyframes eco-bump-flash {
+  0% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+.crystal-whisper {
+  position: absolute;
+  left: 50%;
+  bottom: calc(132px + var(--safe-b));
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #c8fff5;
+  background: rgba(4, 14, 18, 0.72);
+  border: 1px solid rgba(64, 224, 208, 0.55);
+  box-shadow: 0 0 16px rgba(64, 224, 208, 0.35);
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.crystal-whisper.is-pulse {
+  animation: eco-whisper-pulse 1.1s ease-in-out infinite;
+}
+@keyframes eco-whisper-pulse {
+  0%, 100% { opacity: 0.72; box-shadow: 0 0 10px rgba(64, 224, 208, 0.25); }
+  50% { opacity: 1; box-shadow: 0 0 22px rgba(127, 245, 232, 0.55); }
+}
+.crystal-chip.is-near {
+  border-color: rgba(127, 245, 232, 0.85);
+  background: rgba(64, 224, 208, 0.22);
+  box-shadow: 0 0 12px rgba(64, 224, 208, 0.35), inset 0 0 8px rgba(64, 224, 208, 0.12);
+}
+
+.pause-stats {
+  margin: 4px 0 10px;
+  color: #9ff5eb;
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .crystal-whisper { bottom: calc(88px + var(--safe-b)); font-size: 0.7rem; padding: 3px 10px; }
+  .ping-ring { inset: -3px; width: calc(100% + 6px); height: calc(100% + 6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bump-edge.is-on, .crystal-whisper.is-pulse { animation: none !important; }
+  .bump-edge.is-on { opacity: 0.45; }
+  .crystal-whisper { opacity: 0.9; }
+  .ping-ring-fill { transition: none !important; }
+}

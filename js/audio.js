@@ -5,6 +5,8 @@ export const EcoAudio = (() => {
   let master = null;
   let lastSting = 0;
   let lastAmbience = 0;
+  let lastWhisper = 0;
+  let lastBump = 0;
 
   function ensure() {
     if (!ctx) {
@@ -121,6 +123,29 @@ export const EcoAudio = (() => {
     return true;
   }
 
+
+  /** Soft crystal proximity whisper — throttled. */
+  function crystalWhisper(nowMs) {
+    if (muted) return;
+    const t = nowMs || performance.now();
+    if (t - lastWhisper < 1600) return false;
+    lastWhisper = t;
+    tone(880, 0.14, 'sine', 0.045, 1220);
+    setTimeout(() => tone(1180, 0.1, 'triangle', 0.03, 900), 70);
+    return true;
+  }
+
+  /** Soft wall bump thud — throttled. */
+  function wallBump(nowMs) {
+    if (muted) return;
+    const t = nowMs || performance.now();
+    if (t - lastBump < 220) return false;
+    lastBump = t;
+    noiseBurst(0.04, 0.06);
+    tone(140, 0.08, 'triangle', 0.05, 70);
+    return true;
+  }
+
   function suspend() {
     if (ctx && ctx.state === 'running') {
       try { ctx.suspend(); } catch (_) { /* ok */ }
@@ -137,6 +162,6 @@ export const EcoAudio = (() => {
 
   return {
     ensure, setMuted, isMuted, ping, collect, death, win, footstep, ui,
-    ambiencePulse, dangerSting, suspend, resume,
+    ambiencePulse, dangerSting, crystalWhisper, wallBump, suspend, resume,
   };
 })();

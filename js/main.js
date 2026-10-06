@@ -1,9 +1,9 @@
 /* ECO — bootstrap (ES module) */
-import { EcoAudio } from './audio.js?v=202610052100';
-import { EcoLevels } from './levels.js?v=202610052100';
-import { EcoUI } from './ui.js?v=202610052100';
-import { EcoGame } from './game.js?v=202610052100';
-import { EcoInput } from './input.js?v=202610052100';
+import { EcoAudio } from './audio.js?v=202610060530';
+import { EcoLevels } from './levels.js?v=202610060530';
+import { EcoUI } from './ui.js?v=202610060530';
+import { EcoGame } from './game.js?v=202610060530';
+import { EcoInput } from './input.js?v=202610060530';
 
 const canvas = document.getElementById('game');
 
@@ -13,6 +13,18 @@ EcoGame.init(canvas, {
 });
 EcoGame.startLoop();
 EcoUI.updateMuteButtons();
+
+
+function fillPauseStats() {
+  try {
+    EcoUI.showPauseStats(
+      EcoGame.crystalsGot,
+      EcoGame.totalCrystals,
+      EcoGame.levelTime,
+      EcoGame.pingCount
+    );
+  } catch (_) { /* ok */ }
+}
 
 function beginPlay() {
   if (!EcoGame.webglOk) return;
@@ -101,6 +113,7 @@ document.addEventListener('visibilitychange', () => {
   try { EcoAudio.suspend(); } catch (_) { /* ok */ }
   if (EcoGame.getState() === 'play') {
     EcoGame.setState('pause');
+    fillPauseStats();
     EcoUI.show('screen-pause');
     try { EcoInput.releaseAllDirs(); } catch (_) { /* ok */ }
   }

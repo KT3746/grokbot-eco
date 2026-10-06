@@ -1,9 +1,9 @@
 /* ECO — motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202610052100';
-import { EcoInput } from './input.js?v=202610052100';
-import { EcoAudio } from './audio.js?v=202610052100';
-import { EcoUI } from './ui.js?v=202610052100';
-import { EcoRender3D } from './render3d.js?v=202610052100';
+import { EcoLevels } from './levels.js?v=202610060530';
+import { EcoInput } from './input.js?v=202610060530';
+import { EcoAudio } from './audio.js?v=202610060530';
+import { EcoUI } from './ui.js?v=202610060530';
+import { EcoRender3D } from './render3d.js?v=202610060530';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
@@ -34,6 +34,14 @@ export const EcoGame = (() => {
   let compassT = 0;
   let hudTimeAcc = 0;
   const COMPASS_SHOW = 2.6;
+  /* wave4: cooldown PING, rastro, bump, sussurro */
+  const PING_COOLDOWN = 0.9;
+  let pingCd = 0;
+  let trailAcc = 0;
+  let lastTrailX = 0, lastTrailY = 0;
+  let bumpCd = 0;
+  let crystalNear = false;
+  let whisperAcc = 0;
 
   function buzz(pattern) {
     try {
@@ -102,8 +110,18 @@ export const EcoGame = (() => {
     pingCount = 0;
     compassT = 0;
     hudTimeAcc = 0;
+    pingCd = 0;
+    trailAcc = 0;
+    bumpCd = 0;
+    crystalNear = false;
+    whisperAcc = 0;
+    lastTrailX = level.start.x;
+    lastTrailY = level.start.y;
     EcoUI.updateTime(0);
     EcoUI.updateCompass(null);
+    EcoUI.updatePingCooldown(1);
+    EcoUI.setCrystalNear(false);
+    if (typeof EcoRender3D.clearTrail === 'function') EcoRender3D.clearTrail();
     pings = [];
     memory = [];
     EcoUI.setDangerNear(false);
@@ -137,10 +155,13 @@ export const EcoGame = (() => {
 
   function doPing() {
     if (state !== 'play') return;
+    if (pingCd > 0) return;
     noteFirstAction();
     EcoAudio.ensure();
     EcoAudio.ping();
     pingCount++;
+    pingCd = PING_COOLDOWN;
+    EcoUI.updatePingCooldown(0);
     compassT = COMPASS_SHOW;
     buzz(8);
     pings.push({
@@ -228,8 +249,35 @@ export const EcoGame = (() => {
       return;
     }
     noteFirstAction();
-    tryMoveDelta(m.x * SPEED * dt, m.y * SPEED * dt);
+    const ox = player.x, oy = player.y;
+    const wantX = m.x * SPEED * dt;
+    const wantY = m.y * SPEED * dt;
+    const moved = tryMoveDelta(wantX, wantY);
     corridorAssist(dt, m.x, m.y);
+
+    /* wave4 wall bump — tried to move into solid */
+    if (!moved && bumpCd <= 0) {
+      const blocked =
+        (wantX && collides(ox + wantX, oy)) ||
+        (wantY && collides(ox, oy + wantY));
+      if (blocked) {
+        bumpCd = 0.28;
+        EcoUI.flashWallBump();
+        EcoAudio.wallBump(performance.now());
+        buzz(12);
+        if (!reduceMotion) EcoRender3D.setShake(0.06);
+      }
+    }
+
+    /* wave4 footstep trail */
+    const dist = Math.hypot(player.x - lastTrailX, player.y - lastTrailY);
+    if (dist >= 0.42) {
+      lastTrailX = player.x;
+      lastTrailY = player.y;
+      if (typeof EcoRender3D.spawnTrailDot === 'function') {
+        EcoRender3D.spawnTrailDot(player.x, player.y);
+      }
+    }
 
     stepAcc += Math.hypot(m.x, m.y) * SPEED * dt;
     if (stepAcc > 0.6) {
@@ -306,6 +354,37 @@ export const EcoGame = (() => {
     return best;
   }
 
+
+  function nearestCrystalDist() {
+    if (!level) return 99;
+    let best = 99;
+    for (const c of level.crystals) {
+      if (c.taken) continue;
+      const d = Math.hypot(c.x - player.x, c.y - player.y);
+      if (d < best) best = d;
+    }
+    return best;
+  }
+
+  function updateCrystalWhisper(dt) {
+    const dist = nearestCrystalDist();
+    const near = dist < 1.85;
+    if (near !== crystalNear) {
+      crystalNear = near;
+      EcoUI.setCrystalNear(near);
+    }
+    if (near) {
+      whisperAcc += dt;
+      if (whisperAcc >= 1.55) {
+        whisperAcc = 0;
+        EcoAudio.crystalWhisper(performance.now());
+        buzz(6);
+      }
+    } else {
+      whisperAcc = 0;
+    }
+  }
+
   function updateHazardAmbience(dt) {
     const dist = nearestPitDist();
     const wasNear = nearHazard;
@@ -374,6 +453,8 @@ export const EcoGame = (() => {
     if (!reduceMotion) EcoRender3D.setShake(0.55);
     EcoUI.setPlaying(false);
     EcoUI.updateCompass(null);
+    EcoUI.setCrystalNear(false);
+    EcoUI.updatePingCooldown(1);
     buzz([60, 40, 90]);
     EcoUI.showDeathStats(crystalsGot, level.totalCrystals, levelTime);
     EcoUI.show('screen-death');
@@ -388,6 +469,8 @@ export const EcoGame = (() => {
     EcoRender3D.spawnSparkle(player.x, player.y, '#40e0d0');
     const isLast = levelIndex >= EcoLevels.count - 1;
     EcoUI.updateCompass(null);
+    EcoUI.setCrystalNear(false);
+    EcoUI.updatePingCooldown(1);
     buzz([25, 40, 25, 40, 60]);
     EcoUI.showWin(levelIndex + 1, crystalsGot, level.totalCrystals, isLast, {
       time: levelTime, pings: pingCount, levelIndex,
@@ -401,16 +484,25 @@ export const EcoGame = (() => {
     if (state === 'play') {
       if (EcoInput.consumePause()) {
         state = 'pause';
+        try {
+          EcoUI.showPauseStats(crystalsGot, level.totalCrystals, levelTime, pingCount);
+        } catch (_) {}
         EcoUI.show('screen-pause');
         EcoUI.setPlaying(true);
       } else {
         if (EcoInput.consumePing()) doPing();
         levelTime += dt;
+        if (pingCd > 0) {
+          pingCd = Math.max(0, pingCd - dt);
+          EcoUI.updatePingCooldown(1 - pingCd / PING_COOLDOWN);
+        }
+        if (bumpCd > 0) bumpCd = Math.max(0, bumpCd - dt);
         hudTimeAcc += dt;
         if (hudTimeAcc >= 0.25) { hudTimeAcc = 0; EcoUI.updateTime(levelTime); }
         movePlayer(dt);
         updateReveal(dt);
         updateHazardAmbience(dt);
+        updateCrystalWhisper(dt);
         checkPickups();
       }
     } else {
@@ -451,6 +543,8 @@ export const EcoGame = (() => {
     init, startLevel, setState, getState, getLevelIndex, doPing, startLoop,
     get crystalsGot() { return crystalsGot; },
     get totalCrystals() { return level ? level.totalCrystals : 0; },
+    get levelTime() { return levelTime; },
+    get pingCount() { return pingCount; },
     get webglOk() { return webglOk; },
   };
 })();

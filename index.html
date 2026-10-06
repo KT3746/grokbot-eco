@@ -8,12 +8,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>ECO</title>
-  <link rel="stylesheet" href="css/style.css?v=202610052100" />
+  <link rel="stylesheet" href="css/style.css?v=202610060530" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23030508'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%2340e0d0' stroke-width='3' opacity='0.9'/%3E%3Ccircle cx='32' cy='32' r='8' fill='none' stroke='%2340e0d0' stroke-width='2' opacity='0.5'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23c8fff5'/%3E%3C/svg%3E" />
   <script type="importmap">
   {
     "imports": {
-      "three": "./js/vendor/three.module.js?v=202610052100"
+      "three": "./js/vendor/three.module.js?v=202610060530"
     }
   }
   </script>
@@ -42,6 +42,8 @@
     <div id="pickup-flash" class="pickup-flash" aria-hidden="true"></div>
     <div id="pickup-float" class="pickup-float hidden" aria-hidden="true">+1 ✦</div>
     <div id="danger-edge" class="danger-edge" aria-hidden="true"></div>
+    <div id="bump-edge" class="bump-edge" aria-hidden="true"></div>
+    <div id="crystal-whisper" class="crystal-whisper hidden" role="status" aria-live="polite">✦ perto</div>
     <div id="level-intro" class="level-intro hidden" aria-live="polite">
       <span id="intro-phase" class="intro-phase">Fase 1</span>
       <strong id="intro-name" class="intro-name">Eco inicial</strong>
@@ -61,7 +63,13 @@
         <button type="button" class="pad pad-right" data-dir="right" aria-label="Direita">▶</button>
         <button type="button" class="pad pad-down" data-dir="down" aria-label="Baixo">▼</button>
       </div>
-      <button type="button" id="btn-ping" class="ping-btn" aria-label="Eco-localização">PING</button>
+      <button type="button" id="btn-ping" class="ping-btn" aria-label="Eco-localização">
+        <svg class="ping-ring" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="ping-ring-bg" cx="50" cy="50" r="44" />
+          <circle id="ping-ring-fill" class="ping-ring-fill" cx="50" cy="50" r="44" />
+        </svg>
+        <span class="ping-label">PING</span>
+      </button>
     </div>
 
     <!-- Menu principal -->
@@ -97,6 +105,7 @@
       <div class="panel pause-panel">
         <p class="eyebrow">ECO</p>
         <h2>Pausado</h2>
+        <p id="pause-stats" class="stats-line pause-stats">✦ 0/0 · ⏱ 0:00 · PING 0</p>
         <p class="pause-hint">Toque <strong>Continuar</strong> · Esc no teclado</p>
         <button type="button" id="btn-resume" class="btn primary">Continuar</button>
         <button type="button" id="btn-restart" class="btn">Reiniciar fase</button>
@@ -131,6 +140,6 @@
     </section>
   </div>
 
-  <script type="module" src="js/main.js?v=202610052100"></script>
+  <script type="module" src="js/main.js?v=202610060530"></script>
 </body>
 </html>

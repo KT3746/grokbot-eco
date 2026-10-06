@@ -1,4 +1,4 @@
-import { EcoAudio } from './audio.js?v=202610052100';
+import { EcoAudio } from './audio.js?v=202610060530';
 /* ECO — telas PT-BR + tip + polish + meta diária + HUD cristais */
 export const EcoUI = (() => {
   const $ = (id) => document.getElementById(id);
@@ -102,6 +102,8 @@ export const EcoUI = (() => {
       setDangerNear(false);
       updateCompass(null);
       hideLevelIntro();
+      setCrystalNear(false);
+      updatePingCooldown(1);
     }
   }
 
@@ -425,6 +427,65 @@ export const EcoUI = (() => {
     }
   }
 
+
+  /* ---- wave4: cooldown PING, bump, sussurro, pause stats ---- */
+  const PING_CIRC = 276.46; // 2π * r44
+  let bumpTimer = null;
+  let whisperOn = false;
+
+  function updatePingCooldown(ratio) {
+    /* ratio 1 = ready, 0 = just fired / empty ring */
+    const fill = $('ping-ring-fill');
+    const btn = $('btn-ping');
+    const r = Math.max(0, Math.min(1, ratio == null ? 1 : ratio));
+    if (fill) fill.style.strokeDashoffset = String(PING_CIRC * (1 - r));
+    if (btn) {
+      const cooling = r < 0.995;
+      btn.classList.toggle('is-cooling', cooling);
+      btn.classList.toggle('is-ready', !cooling);
+      btn.setAttribute('aria-disabled', cooling ? 'true' : 'false');
+    }
+  }
+
+  function flashWallBump() {
+    const el = $('bump-edge');
+    if (!el) return;
+    if (reduceMotionOn()) {
+      el.style.opacity = '0.4';
+      setTimeout(() => { el.style.opacity = '0'; }, 180);
+      return;
+    }
+    el.classList.remove('is-on');
+    void el.offsetWidth;
+    el.classList.add('is-on');
+    if (bumpTimer) clearTimeout(bumpTimer);
+    bumpTimer = setTimeout(() => {
+      el.classList.remove('is-on');
+      bumpTimer = null;
+    }, 300);
+  }
+
+  function setCrystalNear(on) {
+    const chip = $('hud-crystal-chip');
+    const cue = $('crystal-whisper');
+    if (chip) chip.classList.toggle('is-near', !!on);
+    if (!cue) return;
+    if (on) {
+      cue.classList.remove('hidden');
+      if (!reduceMotionOn()) cue.classList.add('is-pulse');
+      whisperOn = true;
+    } else if (whisperOn) {
+      cue.classList.add('hidden');
+      cue.classList.remove('is-pulse');
+      whisperOn = false;
+    }
+  }
+
+  function showPauseStats(crystals, total, time, pings) {
+    const el = $('pause-stats');
+    if (el) el.textContent = `✦ ${crystals}/${total} · ⏱ ${fmtTime(time)} · PING ${pings}`;
+  }
+
   refreshDailyMeta();
 
   return {
@@ -433,5 +494,6 @@ export const EcoUI = (() => {
     juicePing, juiceCrystal, showEscapeCue, hideEscapeCue,
     refreshDailyMeta, recordEscape, setDangerNear, $,
     updateTime, showLevelIntro, hideLevelIntro, updateCompass, showDeathStats,
+    updatePingCooldown, flashWallBump, setCrystalNear, showPauseStats,
   };
 })();

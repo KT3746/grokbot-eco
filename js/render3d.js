@@ -38,6 +38,7 @@ export const EcoRender3D = (() => {
   let clock = 0;
   let exitReady = false;
   let echoRings = []; // expanding ping rings {mesh, t, life, maxR}
+  let trailDots = []; // wave4 footstep breadcrumbs
   let hazardNear = false;
   let ambienceBoost = 0;
   let baseFogDensity = 0.052;
@@ -188,6 +189,41 @@ export const EcoRender3D = (() => {
       if (s.mesh.material) s.mesh.material.dispose();
     }
     sparkles = [];
+    clearTrail();
+  }
+
+  function clearTrail() {
+    for (const tr of trailDots) {
+      if (!tr.mesh) continue;
+      scene.remove(tr.mesh);
+      if (tr.mesh.geometry) tr.mesh.geometry.dispose();
+      if (tr.mesh.material) tr.mesh.material.dispose();
+    }
+    trailDots = [];
+  }
+
+  /** wave4 — fading cyan breadcrumb where the player walked. */
+  function spawnTrailDot(x, y) {
+    if (!scene || reduceMotion) return;
+    const maxN = lowFx ? 18 : 28;
+    while (trailDots.length >= maxN) {
+      const old = trailDots.shift();
+      if (old && old.mesh) {
+        scene.remove(old.mesh);
+        old.mesh.geometry.dispose();
+        old.mesh.material.dispose();
+      }
+    }
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x40e0d0,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(lowFx ? 0.07 : 0.08, 6, 6), mat);
+    mesh.position.set(x, 0.12, y);
+    scene.add(mesh);
+    trailDots.push({ mesh, t: 0, life: lowFx ? 4.2 : 5.5 });
   }
 
   function buildLevel(level) {
@@ -651,6 +687,22 @@ export const EcoRender3D = (() => {
       }
     }
 
+    // wave4 trail breadcrumbs fade
+    for (let i = trailDots.length - 1; i >= 0; i--) {
+      const tr = trailDots[i];
+      tr.t += dt;
+      const u = Math.min(1, tr.t / tr.life);
+      tr.mesh.material.opacity = Math.max(0, 0.55 * (1 - u));
+      const s = 1 - u * 0.45;
+      tr.mesh.scale.setScalar(Math.max(0.25, s));
+      if (tr.t >= tr.life) {
+        scene.remove(tr.mesh);
+        tr.mesh.geometry.dispose();
+        tr.mesh.material.dispose();
+        trailDots.splice(i, 1);
+      }
+    }
+
     if (flashMesh) {
       if (flash > 0) {
         flashMesh.visible = true;
@@ -708,6 +760,7 @@ export const EcoRender3D = (() => {
     syncPlayer, followCam, updateVisuals,
     setCrystalTaken, spawnSparkle, setShake, setFlash,
     setExitReady, spawnEchoRing, setHazardNear, nudgeAmbience,
+    spawnTrailDot, clearTrail,
     render, showWebglError, projectToScreen,
     get cam() { return cam; },
   };

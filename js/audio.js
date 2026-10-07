@@ -1,4 +1,4 @@
-/* ECO — Web Audio API synths */
+/* ECO - Web Audio API synths */
 export const EcoAudio = (() => {
   let ctx = null;
   let muted = false;
@@ -7,6 +7,8 @@ export const EcoAudio = (() => {
   let lastAmbience = 0;
   let lastWhisper = 0;
   let lastBump = 0;
+  let lastExitHum = 0;
+  let lastCombo = 0;
 
   function ensure() {
     if (!ctx) {
@@ -78,6 +80,37 @@ export const EcoAudio = (() => {
     setTimeout(() => tone(780, 0.35, 'triangle', 0.08, 220), 40);
   }
 
+  /** Eco carregado - mais grave e longo. */
+  function pingCharged() {
+    tone(380, 0.7, 'sine', 0.28, 140);
+    setTimeout(() => tone(620, 0.45, 'triangle', 0.14, 200), 50);
+    setTimeout(() => tone(920, 0.3, 'sine', 0.08, 280), 120);
+    noiseBurst(0.08, 0.05);
+  }
+
+  /** Tom quente perto da saída. */
+  function exitHum(nowMs) {
+    if (muted) return;
+    const t = nowMs || performance.now();
+    if (t - lastExitHum < 1700) return false;
+    lastExitHum = t;
+    tone(220, 0.35, 'sine', 0.05, 320);
+    setTimeout(() => tone(330, 0.22, 'triangle', 0.035, 280), 90);
+    return true;
+  }
+
+  /** Chirp de combo de cristais. */
+  function comboChirp(n, nowMs) {
+    if (muted) return;
+    const t = nowMs || performance.now();
+    if (t - lastCombo < 180) return false;
+    lastCombo = t;
+    const base = 700 + Math.min(4, Math.max(0, (n | 0) - 2)) * 80;
+    tone(base, 0.1, 'triangle', 0.14);
+    setTimeout(() => tone(base * 1.35, 0.16, 'sine', 0.12), 60);
+    return true;
+  }
+
   function collect() {
     tone(660, 0.12, 'triangle', 0.18);
     setTimeout(() => tone(990, 0.18, 'sine', 0.16), 70);
@@ -102,7 +135,7 @@ export const EcoAudio = (() => {
     tone(400, 0.06, 'square', 0.06);
   }
 
-  /** Soft cave ambience pulse — low, rare; skip if muted/throttled. */
+  /** Soft cave ambience pulse - low, rare; skip if muted/throttled. */
   function ambiencePulse(nowMs) {
     if (muted) return;
     const t = nowMs || performance.now();
@@ -112,7 +145,7 @@ export const EcoAudio = (() => {
     setTimeout(() => tone(96, 0.7, 'triangle', 0.02, 55), 180);
   }
 
-  /** Danger sting near hazard — soft, throttled, reduced-motion callers skip visuals only. */
+  /** Danger sting near hazard - soft, throttled, reduced-motion callers skip visuals only. */
   function dangerSting(nowMs) {
     if (muted) return;
     const t = nowMs || performance.now();
@@ -124,7 +157,7 @@ export const EcoAudio = (() => {
   }
 
 
-  /** Soft crystal proximity whisper — throttled. */
+  /** Soft crystal proximity whisper - throttled. */
   function crystalWhisper(nowMs) {
     if (muted) return;
     const t = nowMs || performance.now();
@@ -135,7 +168,7 @@ export const EcoAudio = (() => {
     return true;
   }
 
-  /** Soft wall bump thud — throttled. */
+  /** Soft wall bump thud - throttled. */
   function wallBump(nowMs) {
     if (muted) return;
     const t = nowMs || performance.now();
@@ -161,7 +194,8 @@ export const EcoAudio = (() => {
   loadMute();
 
   return {
-    ensure, setMuted, isMuted, ping, collect, death, win, footstep, ui,
-    ambiencePulse, dangerSting, crystalWhisper, wallBump, suspend, resume,
+    ensure, setMuted, isMuted, ping, pingCharged, collect, death, win, footstep, ui,
+    ambiencePulse, dangerSting, crystalWhisper, wallBump, exitHum, comboChirp,
+    suspend, resume,
   };
 })();

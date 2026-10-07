@@ -1,4 +1,4 @@
-/* ECO — teclado + toque (cardinal-only, precisão de labirinto) */
+/* ECO - teclado + toque (cardinal-only, precisão de labirinto) */
 export const EcoInput = (() => {
   const keys = Object.create(null);
   const DIR_VEC = {
@@ -28,6 +28,10 @@ export const EcoInput = (() => {
   let wasMoving = false; // para micro-snap no release
 
   let pingQueued = false;
+  let pingCharged = false;
+  let pingHolding = false;
+  let pingHoldStart = 0;
+  const PING_CHARGE_MS = 520;
   let pauseQueued = false;
   let blockCanvasPingUntil = 0;
   let tapX = 0, tapY = 0, tapId = null, tapAt = 0;
@@ -47,11 +51,19 @@ export const EcoInput = (() => {
   function setTouchDir(d) {
     if (d && !DIR_VEC[d]) return;
     if (touchDir === d) return;
+    const prev = touchDir;
     touchDir = d || null;
     clearPadVisuals();
+    const hub = document.querySelector('.pad-hub');
+    if (hub) hub.classList.remove('is-active');
     if (touchDir) {
       const btn = document.querySelector('.pad[data-dir="' + touchDir + '"]');
       if (btn) btn.classList.add('is-down');
+      if (hub && touchDir !== prev) {
+        void hub.offsetWidth;
+        hub.classList.add('is-active');
+        setTimeout(() => { try { hub.classList.remove('is-active'); } catch (_) {} }, 360);
+      }
       blockCanvasPingUntil = performance.now() + 280;
     }
   }
@@ -84,7 +96,7 @@ export const EcoInput = (() => {
     const onDown = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      // last pressed wins — cardinal único
+      // last pressed wins - cardinal único
       setTouchDir(d);
       if (ev.pointerId != null) {
         touchPointerId = ev.pointerId;
@@ -181,12 +193,17 @@ export const EcoInput = (() => {
   function bind(canvas) {
     window.addEventListener('keydown', (e) => {
       const k = keyFromEvent(e);
+      const wasDown = !!keys[k];
       keys[k] = true;
       if (e.code) keys['code:' + e.code] = true;
       if (k === 'arrowup' || k === 'arrowdown' || k === 'arrowleft' || k === 'arrowright' || k === ' ') {
         e.preventDefault();
       }
-      if (k === ' ') pingQueued = true;
+      if (k === ' ' && !wasDown && !e.repeat) {
+        pingHolding = true;
+        pingHoldStart = performance.now();
+        pingCharged = false;
+      }
       if (k === 'escape') pauseQueued = true;
     }, { passive: false });
 
@@ -194,6 +211,16 @@ export const EcoInput = (() => {
       const k = keyFromEvent(e);
       keys[k] = false;
       if (e.code) keys['code:' + e.code] = false;
+      if (k === ' ') {
+        if (pingHolding) {
+          const held = performance.now() - pingHoldStart;
+          pingHolding = false;
+          if (!pingQueued) {
+            pingQueued = true;
+            pingCharged = held >= PING_CHARGE_MS;
+          }
+        }
+      }
     });
 
     const blockScroll = (e) => {
@@ -210,7 +237,8 @@ export const EcoInput = (() => {
     const pingBtn = document.getElementById('btn-ping');
     if (pingBtn) {
       let pingDownAt = 0;
-      const pingDown = (e) => {
+      let pingPtr = null;
+      const beginHold = (e) => {
         e.preventDefault();
         e.stopPropagation();
         const now = performance.now();
@@ -218,23 +246,38 @@ export const EcoInput = (() => {
         pingDownAt = now;
         pingBtn.classList.add('is-down');
         blockCanvasPingUntil = now + 400;
-        pingQueued = true;
-        try { if (e.pointerId != null) pingBtn.setPointerCapture(e.pointerId); } catch (_) {}
+        pingHolding = true;
+        pingHoldStart = now;
+        pingCharged = false;
+        if (e.pointerId != null) {
+          pingPtr = e.pointerId;
+          try { pingBtn.setPointerCapture(e.pointerId); } catch (_) {}
+        }
       };
-      const pingUp = (e) => {
+      const endHold = (e, cancel) => {
         if (e && e.preventDefault) e.preventDefault();
-        pingBtn.classList.remove('is-down');
+        if (e && e.pointerId != null && pingPtr != null && e.pointerId !== pingPtr) return;
+        pingBtn.classList.remove('is-down', 'is-charging', 'is-charged-ready');
+        if (!pingHolding) { pingPtr = null; return; }
+        const held = performance.now() - pingHoldStart;
+        pingHolding = false;
+        pingPtr = null;
+        if (cancel) return;
+        if (pingQueued) return; /* already auto-fired charged */
+        pingQueued = true;
+        pingCharged = held >= PING_CHARGE_MS;
       };
-      pingBtn.addEventListener('pointerdown', pingDown);
-      pingBtn.addEventListener('pointerup', pingUp);
-      pingBtn.addEventListener('pointercancel', pingUp);
-      pingBtn.addEventListener('touchstart', pingDown, { passive: false });
-      pingBtn.addEventListener('touchend', pingUp, { passive: false });
-      pingBtn.addEventListener('mousedown', pingDown);
-      pingBtn.addEventListener('mouseup', pingUp);
+      pingBtn.addEventListener('pointerdown', beginHold);
+      pingBtn.addEventListener('pointerup', (e) => endHold(e, false));
+      pingBtn.addEventListener('pointercancel', (e) => endHold(e, true));
+      pingBtn.addEventListener('touchstart', beginHold, { passive: false });
+      pingBtn.addEventListener('touchend', (e) => endHold(e, false), { passive: false });
+      pingBtn.addEventListener('touchcancel', (e) => endHold(e, true), { passive: false });
+      pingBtn.addEventListener('mousedown', beginHold);
+      pingBtn.addEventListener('mouseup', (e) => endHold(e, false));
     }
 
-    /* Canvas usa pointer-events:none — toque no centro cai em #app; HUD/D-pad ficam de fora. */
+    /* Canvas usa pointer-events:none - toque no centro cai em #app; HUD/D-pad ficam de fora. */
     const tapRoot = document.getElementById('app') || canvas;
     tapRoot.addEventListener('pointerdown', (e) => {
       if (performance.now() < blockCanvasPingUntil) return;
@@ -255,6 +298,7 @@ export const EcoInput = (() => {
         if (performance.now() < blockCanvasPingUntil) return;
         if (inControlZone(e.clientX, e.clientY)) return;
         pingQueued = true;
+        pingCharged = false;
       }
     });
 
@@ -278,10 +322,33 @@ export const EcoInput = (() => {
     return false;
   }
 
+  function pollPingHold() {
+    /* Auto-dispara eco carregado ao completar a carga. */
+    if (!pingHolding || pingQueued) return getPingHoldRatio();
+    const r = getPingHoldRatio();
+    if (r >= 1) {
+      pingHolding = false;
+      pingQueued = true;
+      pingCharged = true;
+      const pingBtn = document.getElementById('btn-ping');
+      if (pingBtn) pingBtn.classList.remove('is-down', 'is-charging', 'is-charged-ready');
+    }
+    return r;
+  }
+
+  function getPingHoldRatio() {
+    if (!pingHolding) return 0;
+    return Math.min(1, (performance.now() - pingHoldStart) / PING_CHARGE_MS);
+  }
+
+  function isPingHolding() { return pingHolding; }
+
   function consumePing() {
     if (!pingQueued) return false;
     pingQueued = false;
-    return true;
+    const charged = !!pingCharged;
+    pingCharged = false;
+    return charged ? 'charged' : 'normal';
   }
 
   function peekPing() { return pingQueued; }
@@ -300,6 +367,9 @@ export const EcoInput = (() => {
   function markLevelStart() {
     releaseAllDirs();
     wasMoving = false;
+    pingHolding = false;
+    pingQueued = false;
+    pingCharged = false;
     suppressPingDiscard = true;
     setTimeout(() => { suppressPingDiscard = false; }, 200);
   }
@@ -310,7 +380,7 @@ export const EcoInput = (() => {
 
   function keyboardDir() {
     // Cardinal-only: prioridade última tecla lógica por ordem fixa se múltiplas
-    // Preferência: a mais recente via scan — usamos ordem up/down/left/right e
+    // Preferência: a mais recente via scan - usamos ordem up/down/left/right e
     // se várias, última no array de checagem invertida (right > left > down > up)
     const pressed = [];
     if (keys['w'] || keys['arrowup'] || keys['code:KeyW'] || keys['code:ArrowUp']) pressed.push('up');
@@ -359,5 +429,6 @@ export const EcoInput = (() => {
     bind, consumePing, peekPing, consumePause,
     movement, activeDir, markLevelStart, shouldDiscardPingOutsidePlay,
     releaseAllDirs, justReleasedFlag,
+    pollPingHold, getPingHoldRatio, isPingHolding,
   };
 })();

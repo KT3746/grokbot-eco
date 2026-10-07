@@ -1,9 +1,9 @@
-/* ECO — bootstrap (ES module) */
-import { EcoAudio } from './audio.js?v=202610060530';
-import { EcoLevels } from './levels.js?v=202610060530';
-import { EcoUI } from './ui.js?v=202610060530';
-import { EcoGame } from './game.js?v=202610060530';
-import { EcoInput } from './input.js?v=202610060530';
+/* ECO - bootstrap (ES module) */
+import { EcoAudio } from './audio.js?v=202610070445';
+import { EcoLevels } from './levels.js?v=202610070445';
+import { EcoUI } from './ui.js?v=202610070445';
+import { EcoGame } from './game.js?v=202610070445';
+import { EcoInput } from './input.js?v=202610070445';
 
 const canvas = document.getElementById('game');
 
@@ -86,6 +86,7 @@ EcoUI.$('btn-pause').addEventListener('click', () => {
   if (EcoGame.getState() !== 'play') return;
   EcoAudio.ui();
   EcoGame.setState('pause');
+  fillPauseStats();
   EcoUI.show('screen-pause');
   try { EcoAudio.suspend(); } catch (_) { /* ok */ }
   try { EcoInput.releaseAllDirs(); } catch (_) { /* ok */ }

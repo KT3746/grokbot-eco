@@ -1,6 +1,6 @@
 # ECO
 
-Explore uma caverna quase no escuro. Seu único sentido é o **eco**: um PING revela paredes, cristais, buracos e a saída por um instante — depois a escuridão volta. Ande pela memória.
+Explore uma caverna quase no escuro. Seu único sentido é o **eco**: um PING revela paredes, cristais, buracos e a saída por um instante - depois a escuridão volta. Ande pela memória.
 
 **Jogar:** https://kt3746.github.io/grokbot-eco/
 
@@ -19,7 +19,7 @@ Explore uma caverna quase no escuro. Seu único sentido é o **eco**: um PING re
 | Mover | WASD / setas | D-pad |
 | Ping (eco) | Espaço / clique | Toque / botão PING |
 | Pausar | Esc | Botão ❚❚ |
-| Mudo | — | 🔊 |
+| Mudo | - | 🔊 |
 
 Interface **somente em português (PT-BR)**.
 

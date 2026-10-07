@@ -1,13 +1,13 @@
-/* ECO — motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202610060530';
-import { EcoInput } from './input.js?v=202610060530';
-import { EcoAudio } from './audio.js?v=202610060530';
-import { EcoUI } from './ui.js?v=202610060530';
-import { EcoRender3D } from './render3d.js?v=202610060530';
+/* ECO - motor (tile gameplay + Three.js visuals) */
+import { EcoLevels } from './levels.js?v=202610070445';
+import { EcoInput } from './input.js?v=202610070445';
+import { EcoAudio } from './audio.js?v=202610070445';
+import { EcoUI } from './ui.js?v=202610070445';
+import { EcoRender3D } from './render3d.js?v=202610070445';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
-  const SPEED = 2.95; // tiles/s — precisão de corredor
+  const SPEED = 2.95; // tiles/s - precisão de corredor
   const PING_DURATION = 1.0;
   const PING_RADIUS = 7.5; // tiles
   const MEMORY_FADE = 4.2; // segundos após ping local
@@ -42,6 +42,15 @@ export const EcoGame = (() => {
   let bumpCd = 0;
   let crystalNear = false;
   let whisperAcc = 0;
+  /* wave5: PING carregado, saída perto, combo, chip PING */
+  const PING_COOLDOWN_CHARGED = 1.55;
+  const PING_RADIUS_CHARGED = 11.2;
+  const COMBO_WINDOW = 7.5;
+  let exitNear = false;
+  let exitHumAcc = 0;
+  let comboCount = 0;
+  let comboTimer = 0;
+  let activePingCdMax = PING_COOLDOWN;
 
   function buzz(pattern) {
     try {
@@ -115,12 +124,20 @@ export const EcoGame = (() => {
     bumpCd = 0;
     crystalNear = false;
     whisperAcc = 0;
+    exitNear = false;
+    exitHumAcc = 0;
+    comboCount = 0;
+    comboTimer = 0;
+    activePingCdMax = PING_COOLDOWN;
     lastTrailX = level.start.x;
     lastTrailY = level.start.y;
     EcoUI.updateTime(0);
     EcoUI.updateCompass(null);
     EcoUI.updatePingCooldown(1);
     EcoUI.setCrystalNear(false);
+    EcoUI.setExitNear(false);
+    EcoUI.updatePingCount(0);
+    EcoUI.setPingCharging(0);
     if (typeof EcoRender3D.clearTrail === 'function') EcoRender3D.clearTrail();
     pings = [];
     memory = [];
@@ -140,7 +157,8 @@ export const EcoGame = (() => {
     hintDismissed = false;
     EcoUI.showOnboardingHint();
     EcoUI.showLevelIntro(levelIndex + 1, level.name, level.totalCrystals);
-    if (EcoInput.consumePing()) doPing();
+    const bootPing = EcoInput.consumePing();
+    if (bootPing) doPing(bootPing);
   }
 
   function setState(s) { state = s; }
@@ -153,32 +171,45 @@ export const EcoGame = (() => {
     EcoUI.dismissHint(false);
   }
 
-  function doPing() {
+  function doPing(kind) {
     if (state !== 'play') return;
     if (pingCd > 0) return;
+    const charged = kind === 'charged';
     noteFirstAction();
     EcoAudio.ensure();
-    EcoAudio.ping();
+    if (charged) EcoAudio.pingCharged();
+    else EcoAudio.ping();
     pingCount++;
-    pingCd = PING_COOLDOWN;
+    EcoUI.updatePingCount(pingCount);
+    activePingCdMax = charged ? PING_COOLDOWN_CHARGED : PING_COOLDOWN;
+    pingCd = activePingCdMax;
     EcoUI.updatePingCooldown(0);
-    compassT = COMPASS_SHOW;
-    buzz(8);
+    EcoUI.setPingCharging(0);
+    compassT = charged ? COMPASS_SHOW + 0.7 : COMPASS_SHOW;
+    buzz(charged ? [14, 30, 22] : 8);
+    const maxR = charged ? PING_RADIUS_CHARGED : PING_RADIUS;
+    const life = charged ? PING_DURATION + 0.25 : PING_DURATION;
     pings.push({
       x: player.x,
       y: player.y,
       t: 0,
-      life: PING_DURATION,
-      maxR: PING_RADIUS,
+      life,
+      maxR,
     });
-    /* Light juice — respeita reduced-motion (shake/flash/DOM). */
+    /* Light juice - respeita reduced-motion (shake/flash/DOM). */
     if (!reduceMotion) {
-      EcoRender3D.setShake(0.14);
-      EcoRender3D.setFlash(0.22, 0x40e0d0);
-      EcoRender3D.spawnEchoRing(player.x, player.y);
+      EcoRender3D.setShake(charged ? 0.22 : 0.14);
+      EcoRender3D.setFlash(charged ? 0.38 : 0.22, charged ? 0xf0a060 : 0x40e0d0);
+      EcoRender3D.spawnEchoRing(player.x, player.y, charged
+        ? { maxR: lowFxRing(10.5), colorHex: 0xf0a060, life: 0.95 }
+        : undefined);
+    } else if (charged) {
+      EcoRender3D.setFlash(0.18, 0xf0a060);
     }
-    EcoUI.juicePing();
+    EcoUI.juicePing(charged);
   }
+
+  function lowFxRing(n) { return n; }
 
   function solidAt(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= level.w || ty >= level.h) return true;
@@ -255,7 +286,7 @@ export const EcoGame = (() => {
     const moved = tryMoveDelta(wantX, wantY);
     corridorAssist(dt, m.x, m.y);
 
-    /* wave4 wall bump — tried to move into solid */
+    /* wave4 wall bump - tried to move into solid */
     if (!moved && bumpCd <= 0) {
       const blocked =
         (wantX && collides(ox + wantX, oy)) ||
@@ -385,6 +416,33 @@ export const EcoGame = (() => {
     }
   }
 
+  function updateExitNear(dt) {
+    if (!level || crystalsGot < level.totalCrystals) {
+      if (exitNear) {
+        exitNear = false;
+        EcoUI.setExitNear(false);
+      }
+      exitHumAcc = 0;
+      return;
+    }
+    const dist = Math.hypot(level.exit.x - player.x, level.exit.y - player.y);
+    const near = dist < 2.2;
+    if (near !== exitNear) {
+      exitNear = near;
+      EcoUI.setExitNear(near);
+      if (near) buzz(10);
+    }
+    if (near) {
+      exitHumAcc += dt;
+      if (exitHumAcc >= 1.6) {
+        exitHumAcc = 0;
+        EcoAudio.exitHum(performance.now());
+      }
+    } else {
+      exitHumAcc = 0;
+    }
+  }
+
   function updateHazardAmbience(dt) {
     const dist = nearestPitDist();
     const wasNear = nearHazard;
@@ -415,11 +473,14 @@ export const EcoGame = (() => {
       if (Math.hypot(c.x - player.x, c.y - player.y) < 0.45) {
         c.taken = true;
         crystalsGot++;
+        if (comboTimer > 0) comboCount += 1;
+        else comboCount = 1;
+        comboTimer = COMBO_WINDOW;
         EcoAudio.collect();
         EcoUI.updateHud(levelIndex + 1, crystalsGot, level.totalCrystals);
         EcoRender3D.setCrystalTaken(i);
         EcoRender3D.spawnSparkle(c.x, c.y, '#40e0d0');
-        /* Crystal pickup juice — flash/pop; reduced-motion skips shake/anim. */
+        /* Crystal pickup juice - flash/pop; reduced-motion skips shake/anim. */
         if (!reduceMotion) {
           EcoRender3D.setShake(0.12);
           EcoRender3D.setFlash(0.32, 0x7ff5e8);
@@ -429,6 +490,15 @@ export const EcoGame = (() => {
         }
         EcoUI.juiceCrystal();
         buzz(18);
+        if (comboCount >= 2) {
+          EcoAudio.comboChirp(comboCount, performance.now());
+          EcoUI.juiceCombo(comboCount);
+          buzz([10, 40, 16]);
+          if (!reduceMotion) {
+            EcoRender3D.spawnSparkle(c.x, c.y, '#ffe0b8');
+            EcoRender3D.setFlash(0.18, 0xf0a060);
+          }
+        }
         if (crystalsGot >= level.totalCrystals) {
           EcoRender3D.setExitReady(true);
           buzz([20, 50, 30]);
@@ -454,6 +524,8 @@ export const EcoGame = (() => {
     EcoUI.setPlaying(false);
     EcoUI.updateCompass(null);
     EcoUI.setCrystalNear(false);
+    EcoUI.setExitNear(false);
+    EcoUI.setPingCharging(0);
     EcoUI.updatePingCooldown(1);
     buzz([60, 40, 90]);
     EcoUI.showDeathStats(crystalsGot, level.totalCrystals, levelTime);
@@ -470,6 +542,8 @@ export const EcoGame = (() => {
     const isLast = levelIndex >= EcoLevels.count - 1;
     EcoUI.updateCompass(null);
     EcoUI.setCrystalNear(false);
+    EcoUI.setExitNear(false);
+    EcoUI.setPingCharging(0);
     EcoUI.updatePingCooldown(1);
     buzz([25, 40, 25, 40, 60]);
     EcoUI.showWin(levelIndex + 1, crystalsGot, level.totalCrystals, isLast, {
@@ -490,11 +564,21 @@ export const EcoGame = (() => {
         EcoUI.show('screen-pause');
         EcoUI.setPlaying(true);
       } else {
-        if (EcoInput.consumePing()) doPing();
         levelTime += dt;
+        if (comboTimer > 0) {
+          comboTimer = Math.max(0, comboTimer - dt);
+          if (comboTimer <= 0) comboCount = 0;
+        }
         if (pingCd > 0) {
           pingCd = Math.max(0, pingCd - dt);
-          EcoUI.updatePingCooldown(1 - pingCd / PING_COOLDOWN);
+          EcoUI.updatePingCooldown(1 - pingCd / activePingCdMax);
+          EcoUI.setPingCharging(0);
+        } else {
+          const holdR = EcoInput.pollPingHold();
+          if (EcoInput.isPingHolding()) EcoUI.setPingCharging(holdR);
+          else EcoUI.setPingCharging(0);
+          const pingKind = EcoInput.consumePing();
+          if (pingKind) doPing(pingKind);
         }
         if (bumpCd > 0) bumpCd = Math.max(0, bumpCd - dt);
         hudTimeAcc += dt;
@@ -503,6 +587,7 @@ export const EcoGame = (() => {
         updateReveal(dt);
         updateHazardAmbience(dt);
         updateCrystalWhisper(dt);
+        updateExitNear(dt);
         checkPickups();
       }
     } else {

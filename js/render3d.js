@@ -1,4 +1,4 @@
-/* ECO — Three.js cave renderer (mobile-first, few draw calls) */
+/* ECO - Three.js cave renderer (mobile-first, few draw calls) */
 import * as THREE from 'three';
 
 export const EcoRender3D = (() => {
@@ -127,7 +127,7 @@ export const EcoRender3D = (() => {
       flashMesh.frustumCulled = false;
       flashMesh.renderOrder = 999;
       flashMesh.visible = false;
-      // screen-space overlay parented conceptually — we draw in camera space
+      // screen-space overlay parented conceptually - we draw in camera space
       camera.add(flashMesh);
       flashMesh.position.set(0, 0, -0.5);
       scene.add(camera);
@@ -202,7 +202,7 @@ export const EcoRender3D = (() => {
     trailDots = [];
   }
 
-  /** wave4 — fading cyan breadcrumb where the player walked. */
+  /** wave4 - fading cyan breadcrumb where the player walked. */
   function spawnTrailDot(x, y) {
     if (!scene || reduceMotion) return;
     const maxN = lowFx ? 18 : 28;
@@ -250,7 +250,7 @@ export const EcoRender3D = (() => {
       }
     }
 
-    // Merged floor (single mesh via merged boxes as thin slabs — use Plane chunks merged manually)
+    // Merged floor (single mesh via merged boxes as thin slabs - use Plane chunks merged manually)
     {
       const geo = new THREE.BoxGeometry(1, 0.08, 1);
       const mat = new THREE.MeshStandardMaterial({
@@ -284,7 +284,7 @@ export const EcoRender3D = (() => {
       floorMesh = floor;
     }
 
-    // Walls — InstancedMesh
+    // Walls - InstancedMesh
     {
       const geo = new THREE.BoxGeometry(1, WALL_H, 1);
       const mat = new THREE.MeshStandardMaterial({
@@ -313,7 +313,7 @@ export const EcoRender3D = (() => {
       levelRoot.add(wallMesh);
     }
 
-    // Pits — recessed red hazard
+    // Pits - recessed red hazard
     {
       const geo = new THREE.BoxGeometry(0.92, 0.35, 0.92);
       const mat = new THREE.MeshStandardMaterial({
@@ -333,7 +333,7 @@ export const EcoRender3D = (() => {
       }
     }
 
-    // Crystals — low-poly gems
+    // Crystals - low-poly gems
     crystalMeshes = [];
     for (let i = 0; i < level.crystals.length; i++) {
       const c = level.crystals[i];
@@ -361,7 +361,7 @@ export const EcoRender3D = (() => {
       crystalMeshes.push(g);
     }
 
-    // Exit — warm emissive gate
+    // Exit - warm emissive gate
     {
       exitGroup = new THREE.Group();
       const mat = new THREE.MeshStandardMaterial({
@@ -399,11 +399,13 @@ export const EcoRender3D = (() => {
     exitReady = !!on;
   }
 
-  /** Echo pulse visual polish — expanding teal ring gated by caller (reduced-motion). */
-  function spawnEchoRing(x, y) {
+  /** Echo pulse visual polish - expanding ring; opts.maxR / opts.colorHex for charged. */
+  function spawnEchoRing(x, y, opts) {
     if (reduceMotion || !scene) return;
+    const o = opts || {};
+    const col = o.colorHex != null ? o.colorHex : 0x70fff0;
     const mat = new THREE.MeshBasicMaterial({
-      color: 0x70fff0,
+      color: col,
       transparent: true,
       opacity: 0.75,
       depthWrite: false,
@@ -413,7 +415,9 @@ export const EcoRender3D = (() => {
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.set(x, 0.08, y);
     scene.add(mesh);
-    echoRings.push({ mesh, t: 0, life: lowFx ? 0.55 : 0.75, maxR: lowFx ? 5.5 : 7.2 });
+    const baseMax = o.maxR != null ? o.maxR : (lowFx ? 5.5 : 7.2);
+    const life = o.life != null ? o.life : (lowFx ? 0.55 : 0.75);
+    echoRings.push({ mesh, t: 0, life, maxR: baseMax });
   }
 
   function setCrystalTaken(index) {
@@ -537,7 +541,7 @@ export const EcoRender3D = (() => {
     }
 
 
-    // Ping light — expanding pulse
+    // Ping light - expanding pulse
     if (pingLight) {
       let best = null;
       for (const p of pings) {
@@ -573,7 +577,7 @@ export const EcoRender3D = (() => {
         wallMesh.setColorAt(wt.i, _color.setRGB(r, g, b));
       }
       if (wallMesh.instanceColor) wallMesh.instanceColor.needsUpdate = true;
-      // bump emissive globally with average — material shared
+      // bump emissive globally with average - material shared
       if (wallMesh.material) {
         let peak = 0;
         for (const p of pings) peak = Math.max(peak, 1 - p.t / p.life);

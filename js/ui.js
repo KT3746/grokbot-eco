@@ -1,5 +1,5 @@
-import { EcoAudio } from './audio.js?v=202610060530';
-/* ECO — telas PT-BR + tip + polish + meta diária + HUD cristais */
+import { EcoAudio } from './audio.js?v=202610070445';
+/* ECO - telas PT-BR + tip + polish + meta diária + HUD cristais */
 export const EcoUI = (() => {
   const $ = (id) => document.getElementById(id);
   const META_KEY = 'eco-daily-meta-v1';
@@ -47,7 +47,7 @@ export const EcoUI = (() => {
     } catch (_) { /* ok */ }
   }
 
-  /** Soft daily best — cristais (melhor saída) + contagem de escapes. */
+  /** Soft daily best - cristais (melhor saída) + contagem de escapes. */
   function recordEscape(crystals) {
     const meta = loadDailyMeta();
     meta.escapes += 1;
@@ -103,7 +103,10 @@ export const EcoUI = (() => {
       updateCompass(null);
       hideLevelIntro();
       setCrystalNear(false);
+      setExitNear(false);
+      setPingCharging(0);
       updatePingCooldown(1);
+      updatePingCount(0);
     }
   }
 
@@ -369,8 +372,13 @@ export const EcoUI = (() => {
     el.addEventListener('animationend', done);
   }
 
-  function juicePing() {
-    _pulse($('btn-ping'), 'juice-pulse');
+  function juicePing(charged) {
+    const btn = $('btn-ping');
+    _pulse(btn, 'juice-pulse');
+    if (charged && btn && !reduceMotionOn()) {
+      btn.classList.add('is-charged-ready');
+      setTimeout(() => { try { btn.classList.remove('is-charged-ready'); } catch (_) {} }, 420);
+    }
   }
 
   function juiceCrystal() {
@@ -486,6 +494,82 @@ export const EcoUI = (() => {
     if (el) el.textContent = `✦ ${crystals}/${total} · ⏱ ${fmtTime(time)} · PING ${pings}`;
   }
 
+  /* ---- wave5: carga PING, saída perto, combo, chip PING ---- */
+  let exitWhisperOn = false;
+  let comboTimerUi = null;
+
+  function updatePingCount(n) {
+    const el = $('hud-pings');
+    if (!el) return;
+    const v = Math.max(0, n | 0);
+    el.textContent = `PING ${v}`;
+    el.classList.toggle('is-hot', v > 0);
+  }
+
+  function setPingCharging(ratio) {
+    const btn = $('btn-ping');
+    const fill = $('ping-ring-fill');
+    const r = Math.max(0, Math.min(1, ratio == null ? 0 : ratio));
+    if (!btn) return;
+    const on = r > 0.02;
+    btn.classList.toggle('is-charging', on);
+    btn.classList.toggle('is-charged-ready', on && r >= 0.995);
+    if (on && fill) {
+      /* Durante a carga o anel sobe em âmbar (sobrepõe cooldown). */
+      fill.style.strokeDashoffset = String(PING_CIRC * (1 - r));
+    } else if (!on && fill && !btn.classList.contains('is-cooling')) {
+      fill.style.strokeDashoffset = '0';
+    }
+  }
+
+  function setExitNear(on) {
+    const edge = $('exit-edge');
+    const cue = $('exit-whisper');
+    if (edge) {
+      if (on) {
+        edge.classList.add('is-on');
+        edge.classList.toggle('is-static', reduceMotionOn());
+      } else {
+        edge.classList.remove('is-on', 'is-static');
+      }
+    }
+    if (!cue) return;
+    if (on) {
+      cue.classList.remove('hidden');
+      if (!reduceMotionOn()) cue.classList.add('is-pulse');
+      exitWhisperOn = true;
+    } else if (exitWhisperOn) {
+      cue.classList.add('hidden');
+      cue.classList.remove('is-pulse');
+      exitWhisperOn = false;
+    }
+  }
+
+  function juiceCombo(n) {
+    const flo = $('combo-float');
+    if (!flo) return;
+    flo.textContent = `✦ combo x${Math.max(2, n | 0)}`;
+    if (comboTimerUi) clearTimeout(comboTimerUi);
+    flo.classList.remove('hidden', 'is-pop');
+    if (reduceMotionOn()) {
+      flo.classList.remove('hidden');
+      flo.style.opacity = '1';
+      comboTimerUi = setTimeout(() => {
+        flo.classList.add('hidden');
+        flo.style.opacity = '';
+        comboTimerUi = null;
+      }, 700);
+      return;
+    }
+    void flo.offsetWidth;
+    flo.classList.add('is-pop');
+    comboTimerUi = setTimeout(() => {
+      flo.classList.add('hidden');
+      flo.classList.remove('is-pop');
+      comboTimerUi = null;
+    }, 900);
+  }
+
   refreshDailyMeta();
 
   return {
@@ -495,5 +579,6 @@ export const EcoUI = (() => {
     refreshDailyMeta, recordEscape, setDangerNear, $,
     updateTime, showLevelIntro, hideLevelIntro, updateCompass, showDeathStats,
     updatePingCooldown, flashWallBump, setCrystalNear, showPauseStats,
+    updatePingCount, setPingCharging, setExitNear, juiceCombo,
   };
 })();

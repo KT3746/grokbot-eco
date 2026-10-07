@@ -1,4 +1,4 @@
-/* ECO — fases artesanais
+/* ECO - fases artesanais
    # parede  . chão  P início  C cristal  X buraco/espinho  E saída
 */
 export const EcoLevels = (() => {

@@ -1,4 +1,4 @@
-/* ECO — caverna escura, mobile-first (polish 390×844) */
+/* ECO - caverna escura, mobile-first (polish 390×844) */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -53,7 +53,7 @@ html, body {
 
 .hidden { display: none !important; }
 
-/* HUD — alto contraste ~390px */
+/* HUD - alto contraste ~390px */
 .hud {
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -83,12 +83,14 @@ html, body {
   border-radius: 12px;
   padding: 6px 10px;
   backdrop-filter: blur(2px);
+  flex-wrap: wrap;
+  max-width: min(78vw, 320px);
 }
 .hud-right { pointer-events: auto; flex-shrink: 0; }
 #hud-crystals { color: #7ff5e8; }
 #hud-phase { color: #b8d4d0; }
 
-/* Wave2 — crystal counter HUD polish (mobile chip + fill) */
+/* Wave2 - crystal counter HUD polish (mobile chip + fill) */
 .crystal-chip {
   display: flex;
   flex-direction: column;
@@ -178,7 +180,7 @@ html, body {
   transform: translateX(-50%) translateY(-6px);
 }
 
-/* Light juice — PING / cristal (DOM) */
+/* Light juice - PING / cristal (DOM) */
 .ping-btn.juice-pulse {
   animation: eco-ping-pulse 0.38s ease-out;
 }
@@ -198,7 +200,7 @@ html, body {
   100% { transform: scale(1); }
 }
 
-/* Touch controls — cantos, semi-transparentes, não cobrem o centro */
+/* Touch controls - cantos, semi-transparentes, não cobrem o centro */
 .touch {
   position: absolute;
   inset: 0;
@@ -434,7 +436,7 @@ html, body {
 .c-warm { color: var(--warm); }
 
 
-/* Escape cue — all crystals collected */
+/* Escape cue - all crystals collected */
 .escape-cue {
   position: absolute;
   top: calc(90px + var(--safe-t));
@@ -462,7 +464,7 @@ html, body {
   50% { box-shadow: 0 0 24px rgba(240, 160, 96, 0.5); border-color: rgba(255, 200, 140, 0.85); }
 }
 
-/* Crystal pickup juice — screen flash + floating +1 */
+/* Crystal pickup juice - screen flash + floating +1 */
 .pickup-flash {
   position: absolute;
   inset: 0;
@@ -528,7 +530,7 @@ html, body {
 }
 .pause-hint strong { color: var(--teal); }
 
-/* Wave2 — soft daily meta (PT-BR) */
+/* Wave2 - soft daily meta (PT-BR) */
 .daily-meta {
   color: #8ab8b2;
   font-size: 0.78rem;
@@ -539,7 +541,7 @@ html, body {
   opacity: 0.92;
 }
 
-/* Wave2 — danger sting edge (near hazard); static path for reduced-motion */
+/* Wave2 - danger sting edge (near hazard); static path for reduced-motion */
 .danger-edge {
   position: absolute;
   inset: 0;
@@ -820,4 +822,154 @@ html, body {
   .bump-edge.is-on { opacity: 0.45; }
   .crystal-whisper { opacity: 0.9; }
   .ping-ring-fill { transition: none !important; }
+}
+
+
+/* ---- wave5: PING carregado, saída perto, combo, chip PING ---- */
+.ping-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #9ad4cc;
+  background: rgba(64, 224, 208, 0.08);
+  border: 1px solid rgba(64, 224, 208, 0.28);
+  white-space: nowrap;
+}
+.ping-chip.is-hot {
+  color: #e8fffb;
+  border-color: rgba(127, 245, 232, 0.7);
+  box-shadow: 0 0 10px rgba(64, 224, 208, 0.35);
+}
+
+.time-chip {
+  font-variant-numeric: tabular-nums;
+  color: #b8d4d0;
+}
+
+.ping-btn.is-charging {
+  border-color: rgba(240, 160, 96, 0.75);
+  color: #ffe0b8;
+  box-shadow: 0 0 22px rgba(240, 160, 96, 0.45), inset 0 0 14px rgba(240, 160, 96, 0.18);
+}
+.ping-btn.is-charging .ping-ring-fill {
+  stroke: #f0a060;
+  filter: drop-shadow(0 0 8px rgba(240, 160, 96, 0.9));
+}
+.ping-btn.is-charged-ready {
+  animation: eco-charge-ready 0.55s ease-in-out infinite;
+}
+@keyframes eco-charge-ready {
+  0%, 100% { box-shadow: 0 0 16px rgba(240, 160, 96, 0.4); }
+  50% { box-shadow: 0 0 28px rgba(255, 200, 120, 0.75); }
+}
+
+.exit-edge {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, rgba(240, 160, 96, 0.22), transparent 20%, transparent 80%, rgba(240, 160, 96, 0.22)),
+    linear-gradient(180deg, rgba(240, 160, 96, 0.16), transparent 16%, transparent 84%, rgba(240, 160, 96, 0.16));
+  transition: opacity 0.25s ease;
+}
+.exit-edge.is-on {
+  opacity: 1;
+}
+.exit-edge.is-on:not(.is-static) {
+  animation: eco-exit-pulse 1.4s ease-in-out infinite;
+}
+.exit-edge.is-static { opacity: 0.55; }
+@keyframes eco-exit-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+
+.exit-whisper {
+  position: absolute;
+  left: 50%;
+  bottom: calc(168px + var(--safe-b));
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ffe0b8;
+  background: rgba(18, 10, 4, 0.78);
+  border: 1px solid rgba(240, 160, 96, 0.6);
+  box-shadow: 0 0 16px rgba(240, 160, 96, 0.4);
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.exit-whisper.is-pulse {
+  animation: eco-exit-whisper 1.2s ease-in-out infinite;
+}
+@keyframes eco-exit-whisper {
+  0%, 100% { opacity: 0.75; box-shadow: 0 0 10px rgba(240, 160, 96, 0.3); }
+  50% { opacity: 1; box-shadow: 0 0 22px rgba(255, 180, 100, 0.6); }
+}
+
+.combo-float {
+  position: absolute;
+  left: 50%;
+  top: calc(42% + var(--safe-t) * 0.1);
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  pointer-events: none;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #c8fff5;
+  text-shadow: 0 0 12px rgba(64, 224, 208, 0.8), 0 2px 4px #000;
+  white-space: nowrap;
+}
+.combo-float.is-pop {
+  animation: eco-combo-pop 0.85s cubic-bezier(0.2, 1.25, 0.4, 1) forwards;
+}
+@keyframes eco-combo-pop {
+  0% { opacity: 0; transform: translate(-50%, -40%) scale(0.7); }
+  25% { opacity: 1; transform: translate(-50%, -55%) scale(1.15); }
+  70% { opacity: 1; transform: translate(-50%, -70%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -90%) scale(0.95); }
+}
+
+.pad-hub {
+  position: relative;
+}
+.pad-hub.is-active::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(64, 224, 208, 0.55);
+  box-shadow: 0 0 12px rgba(64, 224, 208, 0.45);
+  animation: eco-hub-ripple 0.35s ease-out;
+  pointer-events: none;
+}
+@keyframes eco-hub-ripple {
+  0% { transform: scale(0.7); opacity: 1; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .exit-whisper { bottom: calc(104px + var(--safe-b)); font-size: 0.7rem; padding: 3px 10px; }
+  .ping-chip { font-size: 0.7rem; padding: 1px 5px; }
+  .combo-float { font-size: 1.1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exit-edge.is-on, .exit-whisper.is-pulse, .combo-float.is-pop,
+  .ping-btn.is-charged-ready, .pad-hub.is-active::after {
+    animation: none !important;
+  }
+  .exit-edge.is-on { opacity: 0.55; }
+  .exit-whisper { opacity: 0.9; }
+  .combo-float.is-pop { opacity: 1; transform: translate(-50%, -50%); }
 }

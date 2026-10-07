@@ -4,16 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#030508" />
-  <meta name="description" content="ECO — explore a caverna no escuro com eco-localização" />
+  <meta name="description" content="ECO - explore a caverna no escuro com eco-localização" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>ECO</title>
-  <link rel="stylesheet" href="css/style.css?v=202610060530" />
+  <link rel="stylesheet" href="css/style.css?v=202610070445" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23030508'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%2340e0d0' stroke-width='3' opacity='0.9'/%3E%3Ccircle cx='32' cy='32' r='8' fill='none' stroke='%2340e0d0' stroke-width='2' opacity='0.5'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23c8fff5'/%3E%3C/svg%3E" />
   <script type="importmap">
   {
     "imports": {
-      "three": "./js/vendor/three.module.js?v=202610060530"
+      "three": "./js/vendor/three.module.js?v=202610070445"
     }
   }
   </script>
@@ -30,6 +30,7 @@
           <span class="crystal-bar" aria-hidden="true"><span id="hud-crystal-fill" class="crystal-fill" style="width:0%"></span></span>
         </div>
         <span id="hud-time" class="time-chip" aria-label="Tempo">0:00</span>
+        <span id="hud-pings" class="ping-chip" aria-label="PINGs">PING 0</span>
       </div>
       <div class="hud-right">
         <button type="button" id="btn-mute" class="icon-btn" aria-label="Mudo">🔊</button>
@@ -44,6 +45,9 @@
     <div id="danger-edge" class="danger-edge" aria-hidden="true"></div>
     <div id="bump-edge" class="bump-edge" aria-hidden="true"></div>
     <div id="crystal-whisper" class="crystal-whisper hidden" role="status" aria-live="polite">✦ perto</div>
+    <div id="exit-edge" class="exit-edge" aria-hidden="true"></div>
+    <div id="exit-whisper" class="exit-whisper hidden" role="status" aria-live="polite">saída perto</div>
+    <div id="combo-float" class="combo-float hidden" aria-hidden="true">✦ combo x2</div>
     <div id="level-intro" class="level-intro hidden" aria-live="polite">
       <span id="intro-phase" class="intro-phase">Fase 1</span>
       <strong id="intro-name" class="intro-name">Eco inicial</strong>
@@ -91,6 +95,7 @@
         <h2>Como jogar</h2>
         <ul class="tips">
           <li><strong>PING</strong> (botão / Espaço) revela a caverna por um instante.</li>
+          <li><strong>Segure PING</strong> no celular para um eco carregado (mais longe).</li>
           <li>Ande no escuro usando a memória do eco.</li>
           <li>Colete <span class="c-teal">cristais ✦</span>, evite <span class="c-danger">buracos</span>.</li>
           <li>Alcance o <span class="c-warm">brilho da saída</span>.</li>
@@ -140,6 +145,6 @@
     </section>
   </div>
 
-  <script type="module" src="js/main.js?v=202610060530"></script>
+  <script type="module" src="js/main.js?v=202610070445"></script>
 </body>
 </html>

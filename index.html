@@ -8,12 +8,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>ECO</title>
-  <link rel="stylesheet" href="css/style.css?v=202610070445" />
+  <link rel="stylesheet" href="css/style.css?v=202610142240" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23030508'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%2340e0d0' stroke-width='3' opacity='0.9'/%3E%3Ccircle cx='32' cy='32' r='8' fill='none' stroke='%2340e0d0' stroke-width='2' opacity='0.5'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23c8fff5'/%3E%3C/svg%3E" />
   <script type="importmap">
   {
     "imports": {
-      "three": "./js/vendor/three.module.js?v=202610070445"
+      "three": "./js/vendor/three.module.js?v=202610142240"
     }
   }
   </script>
@@ -85,6 +85,8 @@
         <p class="rule">Saída sempre aberta · pontuação = cristais</p>
         <p id="daily-meta" class="daily-meta">Hoje · ainda sem recordes</p>
         <button type="button" id="btn-play" class="btn primary">Jogar</button>
+        <p class="level-head"><span>Fases</span><span id="level-total">✦ 0 estrelas</span></p>
+        <div id="level-map" class="level-map" role="group" aria-label="Escolher fase"></div>
         <button type="button" id="btn-mute-menu" class="btn ghost">Mudo: off</button>
       </div>
     </section>
@@ -145,6 +147,6 @@
     </section>
   </div>
 
-  <script type="module" src="js/main.js?v=202610070445"></script>
+  <script type="module" src="js/main.js?v=202610142240"></script>
 </body>
 </html>

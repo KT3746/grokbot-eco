@@ -1,4 +1,4 @@
-import { EcoAudio } from './audio.js?v=202610070445';
+import { EcoAudio } from './audio.js?v=202610142240';
 /* ECO - telas PT-BR + tip + polish + meta diária + HUD cristais */
 export const EcoUI = (() => {
   const $ = (id) => document.getElementById(id);
@@ -215,6 +215,25 @@ export const EcoUI = (() => {
     return s;
   }
 
+  /* Onda 6: chuva de cristais na vitória com 3 estrelas */
+  function crystalRain() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const colors = ['#40e0d0', '#c8fff5', '#f0a060', '#ffe0b8', '#7ff5e8'];
+    for (let i = 0; i < 44; i++) {
+      const c = document.createElement('i');
+      c.className = 'eco-shard';
+      c.style.left = (Math.random() * 100) + '%';
+      c.style.background = colors[i % colors.length];
+      c.style.color = colors[i % colors.length];
+      document.body.appendChild(c);
+      const dx = (Math.random() - 0.5) * 120;
+      c.animate([
+        { transform: 'translateY(-20px) rotate(45deg) scale(1)', opacity: 1 },
+        { transform: `translate(${dx}px, ${window.innerHeight + 30}px) rotate(${225 + Math.random() * 360}deg) scale(.6)`, opacity: .8 },
+      ], { duration: 1500 + Math.random() * 1100, delay: 250 + Math.random() * 500, easing: 'cubic-bezier(.25,.6,.4,1)' }).onfinish = () => c.remove();
+    }
+  }
+
   function showWinStats(crystals, total, stats) {
     const stars = starsFor(crystals, total, stats.time, stats.pings);
     const wrap = $('win-stars');
@@ -229,6 +248,7 @@ export const EcoUI = (() => {
         }
       });
     }
+    if (stars === 3) crystalRain();
     const line = $('win-stats');
     if (line) line.textContent = `⏱ ${fmtTime(stats.time)} · PING ${stats.pings}`;
     const best = loadBest();

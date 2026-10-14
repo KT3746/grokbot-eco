@@ -1,9 +1,9 @@
 /* ECO - motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202610070445';
-import { EcoInput } from './input.js?v=202610070445';
-import { EcoAudio } from './audio.js?v=202610070445';
-import { EcoUI } from './ui.js?v=202610070445';
-import { EcoRender3D } from './render3d.js?v=202610070445';
+import { EcoLevels } from './levels.js?v=202610142240';
+import { EcoInput } from './input.js?v=202610142240';
+import { EcoAudio } from './audio.js?v=202610142240';
+import { EcoUI } from './ui.js?v=202610142240';
+import { EcoRender3D } from './render3d.js?v=202610142240';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
@@ -443,6 +443,7 @@ export const EcoGame = (() => {
     }
   }
 
+  let hazardBuzzAcc = 0;
   function updateHazardAmbience(dt) {
     const dist = nearestPitDist();
     const wasNear = nearHazard;
@@ -455,6 +456,15 @@ export const EcoGame = (() => {
     }
     if (nearHazard) {
       EcoAudio.dangerSting(performance.now());
+      /* Onda 6: pulso de vibração que acelera perto do buraco (sente no polegar) */
+      hazardBuzzAcc += dt;
+      const every = 0.35 + Math.max(0, dist - 0.4) * 0.6;
+      if (hazardBuzzAcc >= every) {
+        hazardBuzzAcc = 0;
+        buzz(dist < 0.9 ? 22 : 12);
+      }
+    } else {
+      hazardBuzzAcc = 0;
     }
     ambienceAcc += dt;
     if (ambienceAcc > 4.0) {

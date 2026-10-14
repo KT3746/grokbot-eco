@@ -973,3 +973,18 @@ html, body {
   .exit-whisper { opacity: 0.9; }
   .combo-float.is-pop { opacity: 1; transform: translate(-50%, -50%); }
 }
+
+/* Onda 6: mapa de fases, chuva de cristais */
+.level-head { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 0 6px; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; opacity: .8; }
+.level-head #level-total { color: #7ff5e8; letter-spacing: .04em; }
+.level-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin-bottom: 10px; max-height: 38vh; overflow-y: auto; }
+.lvl-card { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 76px; padding: 8px 4px; border-radius: 12px;
+  border: 1px solid rgba(64,224,208,.35); background: rgba(10,30,34,.6); color: inherit; font: inherit; cursor: pointer; touch-action: manipulation;
+  transition: transform .12s ease, box-shadow .2s ease; }
+.lvl-card b { font-size: 1.35rem; line-height: 1; color: #c8fff5; }
+.lvl-card .lvl-stars { font-size: .95rem; color: #f0a060; letter-spacing: 1px; }
+.lvl-card small { font-size: .66rem; opacity: .75; line-height: 1.1; text-align: center; }
+.lvl-card:active { transform: scale(.94); }
+.lvl-card.is-gold { border-color: #f0a060; box-shadow: 0 0 14px rgba(240,160,96,.45); }
+.lvl-card.is-locked { opacity: .38; cursor: default; }
+.eco-shard { position: fixed; top: 0; z-index: 90; width: 10px; height: 10px; pointer-events: none; box-shadow: 0 0 10px currentColor; }

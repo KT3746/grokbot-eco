@@ -1,9 +1,9 @@
 /* ECO - bootstrap (ES module) */
-import { EcoAudio } from './audio.js?v=202610142240';
-import { EcoLevels } from './levels.js?v=202610142240';
-import { EcoUI } from './ui.js?v=202610142240';
-import { EcoGame } from './game.js?v=202610142240';
-import { EcoInput } from './input.js?v=202610142240';
+import { EcoAudio } from './audio.js?v=202611090922';
+import { EcoLevels } from './levels.js?v=202611090922';
+import { EcoUI } from './ui.js?v=202611090922';
+import { EcoGame } from './game.js?v=202611090922';
+import { EcoInput } from './input.js?v=202611090922';
 
 const canvas = document.getElementById('game');
 

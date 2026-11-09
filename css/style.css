@@ -988,3 +988,30 @@ html, body {
 .lvl-card.is-gold { border-color: #f0a060; box-shadow: 0 0 14px rgba(240,160,96,.45); }
 .lvl-card.is-locked { opacity: .38; cursor: default; }
 .eco-shard { position: fixed; top: 0; z-index: 90; width: 10px; height: 10px; pointer-events: none; box-shadow: 0 0 10px currentColor; }
+
+
+/* ===== Onda 7: saída revelada, PING pronto, sem batida ===== */
+.exit-revealed {
+  position: fixed; left: 50%; top: 34%; transform: translate(-50%, -50%) scale(.92);
+  z-index: 30; padding: 10px 16px; border-radius: 999px;
+  background: rgba(20, 12, 6, .82); border: 1px solid rgba(240, 160, 96, .65);
+  color: #f0a060; font-weight: 800; letter-spacing: .05em; pointer-events: none;
+  opacity: 0;
+}
+.exit-revealed.is-in { opacity: 1; transform: translate(-50%, -50%) scale(1); transition: opacity .2s ease, transform .25s ease; }
+.exit-revealed.is-out { opacity: 0; }
+.exit-revealed.hidden { display: none; }
+.ping-btn.is-ready-pop {
+  box-shadow: 0 0 0 3px rgba(64, 224, 208, .55), 0 0 22px rgba(64, 224, 208, .45);
+  animation: eco-ping-ready .7s ease;
+}
+@keyframes eco-ping-ready {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.stats-line.is-clean { color: #9dffe0; }
+@media (prefers-reduced-motion: reduce) {
+  .ping-btn.is-ready-pop { animation: none; }
+  .exit-revealed.is-in { transition: none; }
+}

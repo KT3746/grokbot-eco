@@ -23,6 +23,15 @@ Explore uma caverna quase no escuro. Seu único sentido é o **eco**: um PING re
 
 Interface **somente em português (PT-BR)**.
 
+## Onda 7
+
+- **SAÍDA REVELADA!** quando o eco alcança a saída pela 1ª vez
+- **Eco do cristal**: pegar ✦ reforça a memória ao redor
+- **PING pronto**: o botão pulsa quando o cooldown acaba
+- **Sem batida!**: vitória sem bater na parede ganha selo no placar
+
+Cache `?v=202611090922`.
+
 ## Técnico
 
 Site estático na raiz do repositório (GitHub Pages). Vanilla JS + **Three.js** (ES modules, vendor local) + Web Audio API. Sem build, sem npm.

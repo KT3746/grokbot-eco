@@ -1,4 +1,4 @@
-import { EcoAudio } from './audio.js?v=202610142240';
+import { EcoAudio } from './audio.js?v=202611090922';
 /* ECO - telas PT-BR + tip + polish + meta diária + HUD cristais */
 export const EcoUI = (() => {
   const $ = (id) => document.getElementById(id);
@@ -250,7 +250,11 @@ export const EcoUI = (() => {
     }
     if (stars === 3) crystalRain();
     const line = $('win-stats');
-    if (line) line.textContent = `⏱ ${fmtTime(stats.time)} · PING ${stats.pings}`;
+    if (line) {
+      const clean = (stats.bumps | 0) === 0 ? ' · Sem batida!' : '';
+      line.textContent = `⏱ ${fmtTime(stats.time)} · PING ${stats.pings}${clean}`;
+      line.classList.toggle('is-clean', (stats.bumps | 0) === 0);
+    }
     const best = loadBest();
     const k = 'L' + stats.levelIndex;
     const prev = best[k];
@@ -565,6 +569,38 @@ export const EcoUI = (() => {
     }
   }
 
+
+  /* Onda 7 */
+  function showExitRevealed() {
+    let el = $('exit-revealed');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'exit-revealed';
+      el.className = 'exit-revealed';
+      el.setAttribute('role', 'status');
+      el.textContent = 'SAÍDA REVELADA!';
+      ($('app') || document.body).appendChild(el);
+    }
+    el.classList.remove('hidden', 'is-out');
+    void el.offsetWidth;
+    el.classList.add('is-in');
+    clearTimeout(showExitRevealed._t);
+    showExitRevealed._t = setTimeout(() => {
+      el.classList.add('is-out');
+      setTimeout(() => el.classList.add('hidden'), 320);
+    }, 1400);
+  }
+
+  function juicePingReady() {
+    const btn = $('btn-ping');
+    if (!btn) return;
+    btn.classList.remove('is-ready-pop');
+    void btn.offsetWidth;
+    btn.classList.add('is-ready-pop');
+    clearTimeout(juicePingReady._t);
+    juicePingReady._t = setTimeout(() => btn.classList.remove('is-ready-pop'), 700);
+  }
+
   function juiceCombo(n) {
     const flo = $('combo-float');
     if (!flo) return;
@@ -599,6 +635,6 @@ export const EcoUI = (() => {
     refreshDailyMeta, recordEscape, setDangerNear, $,
     updateTime, showLevelIntro, hideLevelIntro, updateCompass, showDeathStats,
     updatePingCooldown, flashWallBump, setCrystalNear, showPauseStats,
-    updatePingCount, setPingCharging, setExitNear, juiceCombo,
+    updatePingCount, setPingCharging, setExitNear, juiceCombo, showExitRevealed, juicePingReady,
   };
 })();

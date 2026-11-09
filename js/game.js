@@ -1,9 +1,9 @@
 /* ECO - motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202610142240';
-import { EcoInput } from './input.js?v=202610142240';
-import { EcoAudio } from './audio.js?v=202610142240';
-import { EcoUI } from './ui.js?v=202610142240';
-import { EcoRender3D } from './render3d.js?v=202610142240';
+import { EcoLevels } from './levels.js?v=202611090922';
+import { EcoInput } from './input.js?v=202611090922';
+import { EcoAudio } from './audio.js?v=202611090922';
+import { EcoUI } from './ui.js?v=202611090922';
+import { EcoRender3D } from './render3d.js?v=202611090922';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
@@ -40,6 +40,9 @@ export const EcoGame = (() => {
   let trailAcc = 0;
   let lastTrailX = 0, lastTrailY = 0;
   let bumpCd = 0;
+  let bumpCount = 0; /* onda 7 */
+  let exitRevealed = false;
+  let pingWasCooling = false;
   let crystalNear = false;
   let whisperAcc = 0;
   /* wave5: PING carregado, saída perto, combo, chip PING */
@@ -128,6 +131,9 @@ export const EcoGame = (() => {
     exitHumAcc = 0;
     comboCount = 0;
     comboTimer = 0;
+    bumpCount = 0;
+    exitRevealed = false;
+    pingWasCooling = false;
     activePingCdMax = PING_COOLDOWN;
     lastTrailX = level.start.x;
     lastTrailY = level.start.y;
@@ -293,6 +299,7 @@ export const EcoGame = (() => {
         (wantY && collides(ox, oy + wantY));
       if (blocked) {
         bumpCd = 0.28;
+        bumpCount += 1;
         EcoUI.flashWallBump();
         EcoAudio.wallBump(performance.now());
         buzz(12);
@@ -355,6 +362,12 @@ export const EcoGame = (() => {
             const fall = 1 - d / p.maxR;
             const boost = fall * fall * (1 - u * 0.15);
             memory[ty][tx] = Math.max(memory[ty][tx], Math.min(1, 0.5 + boost * 1.05));
+            /* Onda 7: primeira vez que o eco alcança a saída */
+            if (!exitRevealed && level.exit && tx === Math.floor(level.exit.x) && ty === Math.floor(level.exit.y)) {
+              exitRevealed = true;
+              EcoUI.showExitRevealed();
+              buzz([12, 40, 18]);
+            }
           }
         }
       }
@@ -500,6 +513,20 @@ export const EcoGame = (() => {
         }
         EcoUI.juiceCrystal();
         buzz(18);
+        /* Onda 7: cristal reforça a memória perto de você */
+        {
+          const R = 2.4;
+          const x0 = Math.max(0, Math.floor(player.x - R));
+          const x1 = Math.min(level.w - 1, Math.ceil(player.x + R));
+          const y0 = Math.max(0, Math.floor(player.y - R));
+          const y1 = Math.min(level.h - 1, Math.ceil(player.y + R));
+          for (let ty = y0; ty <= y1; ty++) {
+            for (let tx = x0; tx <= x1; tx++) {
+              const d = Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y);
+              if (d <= R) memory[ty][tx] = Math.max(memory[ty][tx], 0.82 - d * 0.12);
+            }
+          }
+        }
         if (comboCount >= 2) {
           EcoAudio.comboChirp(comboCount, performance.now());
           EcoUI.juiceCombo(comboCount);
@@ -557,7 +584,7 @@ export const EcoGame = (() => {
     EcoUI.updatePingCooldown(1);
     buzz([25, 40, 25, 40, 60]);
     EcoUI.showWin(levelIndex + 1, crystalsGot, level.totalCrystals, isLast, {
-      time: levelTime, pings: pingCount, levelIndex,
+      time: levelTime, pings: pingCount, levelIndex, bumps: bumpCount,
     });
     if (onWin) onWin(levelIndex, crystalsGot, level.totalCrystals, isLast);
   }
@@ -580,9 +607,15 @@ export const EcoGame = (() => {
           if (comboTimer <= 0) comboCount = 0;
         }
         if (pingCd > 0) {
+          pingWasCooling = true;
           pingCd = Math.max(0, pingCd - dt);
           EcoUI.updatePingCooldown(1 - pingCd / activePingCdMax);
           EcoUI.setPingCharging(0);
+          if (pingCd <= 0 && pingWasCooling) {
+            pingWasCooling = false;
+            EcoUI.juicePingReady();
+            buzz(8);
+          }
         } else {
           const holdR = EcoInput.pollPingHold();
           if (EcoInput.isPingHolding()) EcoUI.setPingCharging(holdR);

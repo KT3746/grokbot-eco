@@ -1,9 +1,9 @@
 /* ECO - motor (tile gameplay + Three.js visuals) */
-import { EcoLevels } from './levels.js?v=202611090922';
-import { EcoInput } from './input.js?v=202611090922';
-import { EcoAudio } from './audio.js?v=202611090922';
-import { EcoUI } from './ui.js?v=202611090922';
-import { EcoRender3D } from './render3d.js?v=202611090922';
+import { EcoLevels } from './levels.js?v=202611122300';
+import { EcoInput } from './input.js?v=202611122300';
+import { EcoAudio } from './audio.js?v=202611122300';
+import { EcoUI } from './ui.js?v=202611122300';
+import { EcoRender3D } from './render3d.js?v=202611122300';
 
 export const EcoGame = (() => {
   const PLAYER_R = 0.24;
@@ -54,6 +54,9 @@ export const EcoGame = (() => {
   let comboCount = 0;
   let comboTimer = 0;
   let activePingCdMax = PING_COOLDOWN;
+  /* onda 8: queda volta ao último cristal (não zera a fase) */
+  let checkpoint = { x: 1.5, y: 1.5 };
+  let falls = 0;
 
   function buzz(pattern) {
     try {
@@ -135,6 +138,8 @@ export const EcoGame = (() => {
     exitRevealed = false;
     pingWasCooling = false;
     activePingCdMax = PING_COOLDOWN;
+    checkpoint = { x: level.start.x, y: level.start.y };
+    falls = 0;
     lastTrailX = level.start.x;
     lastTrailY = level.start.y;
     EcoUI.updateTime(0);
@@ -165,6 +170,41 @@ export const EcoGame = (() => {
     EcoUI.showLevelIntro(levelIndex + 1, level.name, level.totalCrystals);
     const bootPing = EcoInput.consumePing();
     if (bootPing) doPing(bootPing);
+    else freeEcho(4.2, 0.9);
+  }
+
+  /* onda 8: eco de entrada/retorno - mostra os arredores sem gastar PING */
+  function freeEcho(maxR, life) {
+    pings.push({ x: player.x, y: player.y, t: 0, life, maxR, free: true });
+    if (!reduceMotion) EcoRender3D.spawnEchoRing(player.x, player.y, { maxR, colorHex: 0x40e0d0, life: 0.8 });
+  }
+
+  /* onda 8: volta ao último cristal pego, mantendo cristais e tempo */
+  function respawn() {
+    if (state !== 'death' || !level) return;
+    player.x = checkpoint.x;
+    player.y = checkpoint.y;
+    lastTrailX = player.x;
+    lastTrailY = player.y;
+    pings = [];
+    pingCd = 0;
+    nearHazard = false;
+    hazardBuzzAcc = 0;
+    EcoUI.setDangerNear(false);
+    if (typeof EcoRender3D.setHazardNear === 'function') EcoRender3D.setHazardNear(false);
+    if (typeof EcoRender3D.clearTrail === 'function') EcoRender3D.clearTrail();
+    EcoRender3D.syncPlayer(player.x, player.y);
+    EcoRender3D.followCam(player.x, player.y, 1, true);
+    state = 'play';
+    if (EcoInput.releaseAllDirs) { try { EcoInput.releaseAllDirs(); } catch (_) {} }
+    EcoInput.consumePing();
+    EcoUI.hideAllOverlays();
+    EcoUI.setPlaying(true);
+    EcoUI.updateHud(levelIndex + 1, crystalsGot, level.totalCrystals);
+    EcoUI.updatePingCooldown(1);
+    freeEcho(5.5, 1.0);
+    EcoUI.showRespawn(crystalsGot);
+    buzz([10, 30, 10]);
   }
 
   function setState(s) { state = s; }
@@ -496,6 +536,7 @@ export const EcoGame = (() => {
       if (Math.hypot(c.x - player.x, c.y - player.y) < 0.45) {
         c.taken = true;
         crystalsGot++;
+        checkpoint = { x: c.x, y: c.y };
         if (comboTimer > 0) comboCount += 1;
         else comboCount = 1;
         comboTimer = COMBO_WINDOW;
@@ -555,6 +596,7 @@ export const EcoGame = (() => {
   function die() {
     if (state !== 'play') return;
     state = 'death';
+    falls += 1;
     EcoAudio.death();
     EcoRender3D.setFlash(0.55, 0xb42832);
     if (!reduceMotion) EcoRender3D.setShake(0.55);
@@ -565,7 +607,7 @@ export const EcoGame = (() => {
     EcoUI.setPingCharging(0);
     EcoUI.updatePingCooldown(1);
     buzz([60, 40, 90]);
-    EcoUI.showDeathStats(crystalsGot, level.totalCrystals, levelTime);
+    EcoUI.showDeathStats(crystalsGot, level.totalCrystals, levelTime, crystalsGot > 0);
     EcoUI.show('screen-death');
     if (onDeath) onDeath();
   }
@@ -584,7 +626,7 @@ export const EcoGame = (() => {
     EcoUI.updatePingCooldown(1);
     buzz([25, 40, 25, 40, 60]);
     EcoUI.showWin(levelIndex + 1, crystalsGot, level.totalCrystals, isLast, {
-      time: levelTime, pings: pingCount, levelIndex, bumps: bumpCount,
+      time: levelTime, pings: pingCount, levelIndex, bumps: bumpCount, falls,
     });
     if (onWin) onWin(levelIndex, crystalsGot, level.totalCrystals, isLast);
   }
@@ -668,7 +710,7 @@ export const EcoGame = (() => {
   }
 
   return {
-    init, startLevel, setState, getState, getLevelIndex, doPing, startLoop,
+    init, startLevel, respawn, setState, getState, getLevelIndex, doPing, startLoop,
     get crystalsGot() { return crystalsGot; },
     get totalCrystals() { return level ? level.totalCrystals : 0; },
     get levelTime() { return levelTime; },

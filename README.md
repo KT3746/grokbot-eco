@@ -30,7 +30,15 @@ Interface **somente em português (PT-BR)**.
 - **PING pronto**: o botão pulsa quando o cooldown acaba
 - **Sem batida!**: vitória sem bater na parede ganha selo no placar
 
-Cache `?v=202611090922`.
+## Onda 8
+
+- **Fase 4 (Núcleo) agora dá para terminar**: a saída e um cristal estavam fechados por paredes desde o lançamento; o mapa foi aberto e `node tools/checa-fases.mjs` confere todas as fases
+- **Queda não zera a fase**: com cristal pego, **Voltar ao último cristal** mantém cristais e tempo (o placar mostra as quedas)
+- **Celular em pé enxerga a caverna**: a câmera mostra ~8 casas de largura (antes ~4) e um **eco de entrada** grátis mostra os arredores ao começar e ao voltar
+- **Você nunca some atrás da parede**: silhueta clara aparece quando uma parede tampa o personagem
+- **HUD numa linha só** até em telas de 320 px; na última fase o botão vira **Jogar de novo (fase 1)**
+
+Cache `?v=202611122300`.
 
 ## Técnico
 

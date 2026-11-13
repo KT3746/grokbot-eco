@@ -8,12 +8,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>ECO</title>
-  <link rel="stylesheet" href="css/style.css?v=202611090922" />
+  <link rel="stylesheet" href="css/style.css?v=202611122300" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23030508'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%2340e0d0' stroke-width='3' opacity='0.9'/%3E%3Ccircle cx='32' cy='32' r='8' fill='none' stroke='%2340e0d0' stroke-width='2' opacity='0.5'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23c8fff5'/%3E%3C/svg%3E" />
   <script type="importmap">
   {
     "imports": {
-      "three": "./js/vendor/three.module.js?v=202611090922"
+      "three": "./js/vendor/three.module.js?v=202611122300"
     }
   }
   </script>
@@ -127,7 +127,9 @@
         <p class="tagline">O escuro engoliu você.</p>
         <p id="death-stats" class="stats-line">✦ 0/0 · 0:00</p>
         <p class="death-tip">Dica: no PING os buracos brilham em <span class="c-danger">vermelho</span>.</p>
-        <button type="button" id="btn-retry" class="btn primary">Reiniciar</button>
+        <p id="death-keep" class="death-keep hidden">Seus cristais ficam com você.</p>
+        <button type="button" id="btn-respawn" class="btn primary hidden">Voltar ao último cristal</button>
+        <button type="button" id="btn-retry" class="btn primary">Tentar de novo</button>
         <button type="button" id="btn-death-menu" class="btn ghost">Menu</button>
       </div>
     </section>
@@ -147,6 +149,6 @@
     </section>
   </div>
 
-  <script type="module" src="js/main.js?v=202611090922"></script>
+  <script type="module" src="js/main.js?v=202611122300"></script>
 </body>
 </html>

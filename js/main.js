@@ -1,9 +1,9 @@
 /* ECO - bootstrap (ES module) */
-import { EcoAudio } from './audio.js?v=202611090922';
-import { EcoLevels } from './levels.js?v=202611090922';
-import { EcoUI } from './ui.js?v=202611090922';
-import { EcoGame } from './game.js?v=202611090922';
-import { EcoInput } from './input.js?v=202611090922';
+import { EcoAudio } from './audio.js?v=202611122300';
+import { EcoLevels } from './levels.js?v=202611122300';
+import { EcoUI } from './ui.js?v=202611122300';
+import { EcoGame } from './game.js?v=202611122300';
+import { EcoInput } from './input.js?v=202611122300';
 
 const canvas = document.getElementById('game');
 
@@ -56,6 +56,11 @@ EcoUI.$('btn-resume').addEventListener('click', () => {
 EcoUI.$('btn-restart').addEventListener('click', () => {
   EcoAudio.ui();
   EcoGame.startLevel(EcoGame.getLevelIndex());
+});
+
+EcoUI.$('btn-respawn').addEventListener('click', () => {
+  EcoAudio.ui();
+  EcoGame.respawn();
 });
 
 EcoUI.$('btn-retry').addEventListener('click', () => {

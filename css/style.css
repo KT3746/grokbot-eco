@@ -1015,3 +1015,28 @@ html, body {
   .ping-btn.is-ready-pop { animation: none; }
   .exit-revealed.is-in { transition: none; }
 }
+
+/* ===== Onda 8: HUD numa linha só, volta ao último cristal ===== */
+.hud-left { flex-wrap: nowrap; max-width: none; flex: 0 1 auto; }
+.hud-left > * { white-space: nowrap; flex-shrink: 0; }
+.time-chip, .ping-chip, #hud-crystals { font-variant-numeric: tabular-nums; }
+@media (max-width: 420px) {
+  .hud { gap: 6px; padding-left: calc(8px + var(--safe-l)); padding-right: calc(8px + var(--safe-r)); }
+  .hud-left { gap: 6px; padding: 5px 7px; }
+  .hud-right { gap: 6px; }
+}
+@media (max-width: 370px) {
+  #hud-phase { font-size: 0.78rem; letter-spacing: 0; }
+  .hud-left { gap: 4px; padding: 4px 6px; }
+  .crystal-chip { min-width: 3.2rem; }
+  .hud .time-chip, .hud .ping-chip { font-size: 0.68rem; padding: 1px 4px; letter-spacing: 0; }
+  .hud-right { gap: 4px; }
+}
+@media (max-width: 340px) {
+  .hud .time-chip { display: none; }
+}
+.exit-revealed { white-space: nowrap; }
+.exit-revealed.is-respawn {
+  color: #9dffe0; border-color: rgba(64, 224, 208, .65); background: rgba(4, 18, 20, .85);
+}
+.death-keep { color: #9dffe0; font-weight: 700; margin: -6px 0 12px; }

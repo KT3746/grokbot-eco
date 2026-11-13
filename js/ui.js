@@ -1,4 +1,4 @@
-import { EcoAudio } from './audio.js?v=202611090922';
+import { EcoAudio } from './audio.js?v=202611122300';
 /* ECO - telas PT-BR + tip + polish + meta diária + HUD cristais */
 export const EcoUI = (() => {
   const $ = (id) => document.getElementById(id);
@@ -198,9 +198,47 @@ export const EcoUI = (() => {
     if (label) label.textContent = c.kind === 'exit' ? `saída ${c.dist}m` : `✦ ${c.dist}m`;
   }
 
-  function showDeathStats(crystals, total, time) {
+  function showDeathStats(crystals, total, time, canRespawn) {
     const el = $('death-stats');
     if (el) el.textContent = `✦ ${crystals}/${total} · ⏱ ${fmtTime(time)}`;
+    /* onda 8: com cristal pego, a queda volta ao último cristal (não zera) */
+    const back = $('btn-respawn');
+    const retry = $('btn-retry');
+    const note = $('death-keep');
+    if (back) back.classList.toggle('hidden', !canRespawn);
+    if (retry) {
+      retry.classList.toggle('primary', !canRespawn);
+      retry.textContent = canRespawn ? 'Reiniciar fase do zero' : 'Tentar de novo';
+    }
+    if (note) {
+      note.classList.toggle('hidden', !canRespawn);
+      note.textContent = crystals === 1
+        ? 'Seu cristal fica com você.'
+        : `Seus ${crystals} cristais ficam com você.`;
+    }
+    setTimeout(() => {
+      try { (canRespawn ? back : retry)?.focus({ preventScroll: true }); } catch (_) {}
+    }, 60);
+  }
+
+  function showRespawn() {
+    let el = $('respawn-cue');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'respawn-cue';
+      el.className = 'exit-revealed is-respawn';
+      el.setAttribute('role', 'status');
+      ($('app') || document.body).appendChild(el);
+    }
+    el.textContent = 'De volta ao último cristal';
+    el.classList.remove('hidden', 'is-out');
+    void el.offsetWidth;
+    el.classList.add('is-in');
+    clearTimeout(showRespawn._t);
+    showRespawn._t = setTimeout(() => {
+      el.classList.add('is-out');
+      setTimeout(() => el.classList.add('hidden'), 320);
+    }, 1300);
   }
 
   function loadBest() {
@@ -252,7 +290,9 @@ export const EcoUI = (() => {
     const line = $('win-stats');
     if (line) {
       const clean = (stats.bumps | 0) === 0 ? ' · Sem batida!' : '';
-      line.textContent = `⏱ ${fmtTime(stats.time)} · PING ${stats.pings}${clean}`;
+      const f = stats.falls | 0;
+      const quedas = f ? ` · ${f} ${f === 1 ? 'queda' : 'quedas'}` : '';
+      line.textContent = `⏱ ${fmtTime(stats.time)} · PING ${stats.pings}${quedas}${clean}`;
       line.classList.toggle('is-clean', (stats.bumps | 0) === 0);
     }
     const best = loadBest();
@@ -282,6 +322,8 @@ export const EcoUI = (() => {
   function showWin(phase, crystals, total, isLast, stats) {
     $('win-title').textContent = isLast ? 'Caverna conquistada!' : `Fase ${phase} concluída!`;
     $('win-score').textContent = `Cristais: ${crystals}/${total}` + (isLast ? ' · Fim de jogo' : '');
+    const next = $('btn-next');
+    if (next) next.textContent = isLast ? 'Jogar de novo (fase 1)' : 'Próxima fase';
     if (stats) showWinStats(crystals, total, stats);
     recordEscape(crystals);
     hideEscapeCue();
@@ -633,7 +675,7 @@ export const EcoUI = (() => {
     tipSeen, markTip, showOnboardingHint, dismissHint, isHintActive,
     juicePing, juiceCrystal, showEscapeCue, hideEscapeCue,
     refreshDailyMeta, recordEscape, setDangerNear, $,
-    updateTime, showLevelIntro, hideLevelIntro, updateCompass, showDeathStats,
+    updateTime, showLevelIntro, hideLevelIntro, updateCompass, showDeathStats, showRespawn,
     updatePingCooldown, flashWallBump, setCrystalNear, showPauseStats,
     updatePingCount, setPingCharging, setExitNear, juiceCombo, showExitRevealed, juicePingReady,
   };

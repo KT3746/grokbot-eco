@@ -42,6 +42,9 @@ export const EcoRender3D = (() => {
   let hazardNear = false;
   let ambienceBoost = 0;
   let baseFogDensity = 0.052;
+  /* onda 8: celular em pé enxergava só ~4 tiles de largura; abre a lente e afasta um pouco */
+  let camK = 1;
+  const PORTRAIT_SPAN = 8.2; // tiles visíveis na largura (alcance do PING = 7,5)
 
   function refreshFx() {
     reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -112,6 +115,16 @@ export const EcoRender3D = (() => {
       );
       glint.position.set(-0.06, 0.48, -0.1);
       playerRoot.add(glint);
+      /* onda 8: silhueta "raio-x" - só aparece quando uma parede tampa você */
+      const ghostMat = new THREE.MeshBasicMaterial({
+        color: 0xd8fffa, transparent: true, opacity: 0.85, depthWrite: false,
+      });
+      ghostMat.depthFunc = THREE.GreaterDepth;
+      const ghost = new THREE.Mesh(body.geometry, ghostMat);
+      ghost.position.copy(body.position);
+      ghost.scale.setScalar(1.08);
+      ghost.renderOrder = 20;
+      playerRoot.add(ghost);
       scene.add(playerRoot);
 
       // Fullscreen flash quad (death)
@@ -150,7 +163,19 @@ export const EcoRender3D = (() => {
     refreshFx();
     const w = window.innerWidth;
     const h = window.innerHeight;
-    camera.aspect = w / Math.max(1, h);
+    const aspect = w / Math.max(1, h);
+    camera.aspect = aspect;
+    const pitch = (CAM_ANGLE * Math.PI) / 180;
+    const d0 = Math.hypot(CAM_H, (CAM_H / Math.tan(pitch)) * 0.42);
+    let vf = 42;
+    camK = 1;
+    if (aspect < 1) {
+      const needTanH = PORTRAIT_SPAN / 2 / d0;
+      vf = Math.min(64, Math.max(42, (2 * Math.atan(needTanH / aspect) * 180) / Math.PI));
+      const span = 2 * d0 * Math.tan((vf * Math.PI) / 360) * aspect;
+      camK = Math.min(1.4, Math.max(1, PORTRAIT_SPAN / span));
+    }
+    camera.fov = vf;
     camera.updateProjectionMatrix();
     const dprCap = lowFx ? 1.25 : 1.5;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap));
@@ -479,8 +504,8 @@ export const EcoRender3D = (() => {
       oy = (Math.random() - 0.5) * shake * amp;
     }
     const cx = cam.x + ox;
-    const cz = cam.y + dist * 0.42 + oy;
-    const cy = CAM_H;
+    const cz = cam.y + dist * 0.42 * camK + oy;
+    const cy = CAM_H * camK;
     camera.position.set(cx, cy, cz);
     camera.lookAt(cam.x, 0.2, cam.y);
   }
@@ -528,7 +553,7 @@ export const EcoRender3D = (() => {
       const avg = samples ? localMem / samples : 0;
       const clear = avg * 0.028; // soft clarity bonus
       const hazardFog = hazardNear ? 0.006 : 0;
-      scene.fog.density = Math.max(0.04, baseFogDensity - clear + hazardFog);
+      scene.fog.density = Math.max(0.04 / camK, (baseFogDensity - clear + hazardFog) / camK);
     }
     if (ambient) {
       const pulse = reduceMotion ? 0 : Math.sin(clock * 0.7) * 0.015;
